@@ -1,8 +1,17 @@
+using DateTime.Application;
+using DateTime.Application.Database.DatabaseManagement;
+using DateTime.Application.Logging;
+using Hangfire;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+//builder.Services.AddSwaggerGen();
+
+builder.Services.AddApplication(builder.Configuration);
 
 var app = builder.Build();
 
@@ -10,8 +19,25 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseHangfireDashboard();
+
+try
+{
+    var reloadDatabasesService = app.Services.GetRequiredService<IReloadDatabasesService>();
+    RecurringJob.AddOrUpdate("ReloadDatabasesFromFiles", () => reloadDatabasesService.ReloadAsync(CancellationToken.None), "*/10 * * * * *"); //every 10 seconds
+
+    var checkStatusService = app.Services.GetRequiredService<IDatabaseAvailabilityControl>();
+    RecurringJob.AddOrUpdate("CheckAndUpdateDatabasesStatus", () => checkStatusService.CheckAndUpdateDatabasesStatus(CancellationToken.None), Cron.Minutely());
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occurred while starting recurring job.");
+}
 
 app.Run();
