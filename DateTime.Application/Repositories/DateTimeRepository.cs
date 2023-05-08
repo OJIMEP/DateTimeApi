@@ -1,10 +1,8 @@
 ﻿using Dapper;
 using DateTime.Application.Cache;
 using DateTime.Application.Database;
-using DateTime.Application.Database.DatabaseManagement;
 using DateTime.Application.Models;
 using DateTime.Application.Queries;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
@@ -15,15 +13,17 @@ namespace DateTime.Application.Repositories
 {
     public class DateTimeRepository : IDateTimeRepository
     {
+        private readonly IConfiguration _configuration;
         private readonly IDbConnectionFactory _dbConnectionFactory;
         private readonly RedisSettings _redisSettings;
         private readonly IConnectionMultiplexer _redis;
 
-        public DateTimeRepository(IDbConnectionFactory dbConnectionFactory, RedisSettings redisSettings, IConnectionMultiplexer redis)
+        public DateTimeRepository(IDbConnectionFactory dbConnectionFactory, RedisSettings redisSettings, IConnectionMultiplexer redis, IConfiguration configuration)
         {
             _dbConnectionFactory = dbConnectionFactory;
             _redisSettings = redisSettings;
             _redis = redis;
+            _configuration = configuration;
         }
 
         public async Task<AvailableDateResult> GetAvailableDateAsync(AvailableDateQuery query, CancellationToken token = default)
@@ -44,7 +44,6 @@ namespace DateTime.Application.Repositories
 
                 if (result.Data.Count == query.Codes.Count)
                 {
-                    //DeleteEmptyDataFromResult(result);
                     return result;
                 }
 
@@ -75,7 +74,7 @@ namespace DateTime.Application.Repositories
 
             var queryParameters = new DynamicParameters();
 
-            string queryText = await AvailableDateQueryText(query, queryParameters, globalParameters, dbConnection);
+            string queryText = AvailableDateQueryText(query, queryParameters, globalParameters, dbConnection);
 
             Stopwatch watch = Stopwatch.StartNew();
 
@@ -83,38 +82,14 @@ namespace DateTime.Application.Repositories
                 new CommandDefinition(queryText, queryParameters, cancellationToken: token)
             );
 
-            try
-            {
-                //execute the SQLCommand
-                SqlDataReader dr = await command.ExecuteReaderAsync(token);
-
-                //check if there are records
-                if (dr.HasRows)
-                {
-                    while (dr.Read())
-                    {
-                        var article = dr.GetString(0);
-                        var code = dr.GetString(1);
-                        var availableDateCourier = dr.GetDateTime(2).AddMonths(-24000);
-                        var availableDateSelf = dr.GetDateTime(3).AddMonths(-24000);
-
-                        dbResult.Article.Add(article);
-                        dbResult.Code.Add(code);
-                        dbResult.Courier.Add(new(availableDateCourier));
-                        dbResult.Self.Add(new(availableDateSelf));
-                    }
-                }
-
-                //close data reader
-                _ = dr.CloseAsync();
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
-
             watch.Stop();
             //_contextAccessor.HttpContext.Items["TimeSqlExecutionFact"] = watch.ElapsedMilliseconds;
+
+            foreach (var record in dbResult)
+            {
+                record.Courier.AddYears(-2000);
+                record.Self.AddYears(-2000);
+            };
 
             var resultDict = new AvailableDateResult();
 
@@ -130,23 +105,24 @@ namespace DateTime.Application.Repositories
                         Self = null
                     };
 
-                    int dbResultIndex = -1;
+                    AvailableDateRecord? dbRecord;
+
                     if (String.IsNullOrEmpty(codeItem.Code))
                     {
-                        dbResultIndex = dbResult.Article.FindIndex(s => s == codeItem.Article);
+                        dbRecord = dbResult.FirstOrDefault(x => x.Article == codeItem.Article);
                     }
                     else
                     {
-                        dbResultIndex = dbResult.Code.FindIndex(s => s == codeItem.Code);
+                        dbRecord = dbResult.FirstOrDefault(x => x.Code == codeItem.Code);
                     }
 
-                    if (dbResultIndex != -1)
+                    if (dbRecord is not null)
                     {
-                        resultElement.Courier = query.DeliveryTypes.Contains("courier") && dbResult.Courier[dbResultIndex].Year != 3999
-                        ? dbResult.Courier[dbResultIndex].Date.ToString("yyyy-MM-ddTHH:mm:ss")
-                        : null;
-                        resultElement.Self = query.DeliveryTypes.Contains("self") && dbResult.Self[dbResultIndex].Year != 3999
-                            ? dbResult.Self[dbResultIndex].Date.ToString("yyyy-MM-ddTHH:mm:ss")
+                        resultElement.Courier = query.DeliveryTypes.Contains("courier") && dbRecord.Courier.Year != 3999
+                            ? dbRecord.Courier.ToString("yyyy-MM-ddTHH:mm:ss")
+                            : null;
+                        resultElement.Self = query.DeliveryTypes.Contains("self") && dbRecord.Self.Year != 3999
+                            ? dbRecord.Self.ToString("yyyy-MM-ddTHH:mm:ss")
                             : null;
                     }
 
@@ -174,60 +150,53 @@ namespace DateTime.Application.Repositories
 
         private string AvailableDateQueryText(AvailableDateQuery query, DynamicParameters parameters, List<GlobalParameter> globalParameters, DbConnection dbConnection)
         {
-            string queryText = "";
-
             List<string> pickups = new();
 
             var queryTextBegin = TextFillGoodsTable(query, parameters, true, pickups);
 
-            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
-            {
-                queryTextBegin = queryTextBegin.Replace(", KEEPFIXED PLAN", "");
-            }
             List<string> queryParts = new()
             {
-                inputData.CheckQuantity == true ? Queries.AvailableDateWithCount1 : Queries.AvailableDate1,
-                customAggs == true ? Queries.AvailableDate2MinimumWarehousesCustom : Queries.AvailableDate2MinimumWarehousesBasic,
-                inputData.CheckQuantity == true ? Queries.AvailableDateWithCount3 : Queries.AvailableDate3,
-                Queries.AvailableDate4SourcesWithPrices,
-                inputData.CheckQuantity == true ? Queries.AvailableDateWithCount5 : Queries.AvailableDate5,
-                customAggs == true ? Queries.AvailableDate6IntervalsCustom : Queries.AvailableDate6IntervalsBasic,
-                Queries.AvailableDate7,
-                customAggs == true ? Queries.AvailableDate8DeliveryPowerCustom : Queries.AvailableDate8DeliveryPowerBasic,
-                Queries.AvailableDate9
+                query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount1 : AvailableDateQueries.AvailableDate1,
+                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate2MinimumWarehousesCustom : AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
+                query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount3 : AvailableDateQueries.AvailableDate3,
+                AvailableDateQueries.AvailableDate4SourcesWithPrices,
+                query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount5 : AvailableDateQueries.AvailableDate5,
+                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate6IntervalsCustom : AvailableDateQueries.AvailableDate6IntervalsBasic,
+                AvailableDateQueries.AvailableDate7,
+                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate8DeliveryPowerCustom : AvailableDateQueries.AvailableDate8DeliveryPowerBasic,
+                AvailableDateQueries.AvailableDate9
             };
 
-            query = String.Join("", queryParts);
+            var queryText = String.Join("", queryParts);
 
             List<string> pickupParameters = new();
             foreach (var pickupPoint in pickups)
             {
                 var parameterString = string.Format("@PickupPointAll{0}", pickups.IndexOf(pickupPoint));
                 pickupParameters.Add(parameterString);
-                cmd.Parameters.Add(parameterString, SqlDbType.NVarChar, 4);
-                cmd.Parameters[parameterString].Value = pickupPoint;
+                parameters.Add(parameterString, pickupPoint);
             }
             if (pickupParameters.Count == 0)
             {
                 pickupParameters.Add("NULL");
             }
 
-            var DateMove = DateTime.Now.AddMonths(24000);
+            var DateMove = System.DateTime.Now.AddMonths(24000);
 
-            cmd.Parameters.AddWithValue("@P_CityCode", inputData.CityId);
-            cmd.Parameters.AddWithValue("@P_DateTimeNow", DateMove);
-            cmd.Parameters.AddWithValue("@P_DateTimePeriodBegin", DateMove.Date);
-            cmd.Parameters.AddWithValue("@P_DateTimePeriodEnd", DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
-            cmd.Parameters.AddWithValue("@P_TimeNow", new DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second));
-            cmd.Parameters.AddWithValue("@P_EmptyDate", new DateTime(2001, 1, 1, 0, 0, 0));
-            cmd.Parameters.AddWithValue("@P_MaxDate", new DateTime(5999, 11, 11, 0, 0, 0));
-            cmd.Parameters.AddWithValue("@P_DaysToShow", 7);
-            cmd.Parameters.AddWithValue("@P_ApplyShifting", (int)parameters1C.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
-            cmd.Parameters.AddWithValue("@P_DaysToShift", (int)parameters1C.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            parameters.Add("@P_CityCode", query.CityId);
+            parameters.Add("@P_DateTimeNow", DateMove);
+            parameters.Add("@P_DateTimePeriodBegin", DateMove.Date);
+            parameters.Add("@P_DateTimePeriodEnd", DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
+            parameters.Add("@P_TimeNow", new System.DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second));
+            parameters.Add("@P_EmptyDate", new System.DateTime(2001, 1, 1, 0, 0, 0));
+            parameters.Add("@P_MaxDate", new System.DateTime(5999, 11, 11, 0, 0, 0));
+            parameters.Add("@P_DaysToShow", 7);
+            parameters.Add("@P_ApplyShifting", (int)globalParameters.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            parameters.Add("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
 
-            if (inputData.CheckQuantity)
+            if (query.CheckQuantity)
             {
-                cmd.Parameters.AddWithValue("@P_StockPriority", (int)parameters1C.GetValue("ПриоритизироватьСток_64854"));
+                parameters.Add("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             }
 
             string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
@@ -237,21 +206,26 @@ namespace DateTime.Application.Repositories
             var pickupWorkingHoursJoinType = _configuration.GetValue<string>("pickupWorkingHoursJoinType");
 
             string useIndexHint = _configuration.GetValue<string>("useIndexHintWarehouseDates");// @", INDEX([_InfoRg23830_Custom2])";
-            if (databaseType != DatabaseType.ReplicaTables || customAggs)
+            if (dbConnection.DatabaseType != DatabaseType.ReplicaTables || dbConnection.UseAggregations)
             {
                 useIndexHint = "";
             }
 
-            cmd.CommandText = queryTextBegin + string.Format(query, string.Join(",", pickupParameters),
+            queryText = queryTextBegin + string.Format(queryText, string.Join(",", pickupParameters),
                 dateTimeNowOptimizeString,
                 DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
-                DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
-                parameters1C.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
-                parameters1C.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
+                DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
+                globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
+                globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 pickupWorkingHoursJoinType,
                 useIndexHint);
 
-            return cmd;
+            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
+            {
+                queryText = queryText.Replace(", KEEPFIXED PLAN", "");
+            }
+
+            return queryText;
         }
 
         public static string TextFillGoodsTable(AvailableDateQuery query, DynamicParameters queryParameters, bool optimizeRowsCount, List<string> PickupsList)
@@ -309,7 +283,7 @@ namespace DateTime.Application.Repositories
                 var quantity = $"@Quantity{index}";
 
                 queryParameters.Add(article, item.Article);
-                queryParameters.Add(code, string.IsNullOrEmpty(item.Code) ? DBNull.Value : item.Code);
+                queryParameters.Add(code, string.IsNullOrEmpty(item.Code) ? null : item.Code);
                 queryParameters.Add(quantity, item.Quantity);
 
                 var parameterString = $"({article}, {code}, NULL, {quantity})";
@@ -374,11 +348,16 @@ namespace DateTime.Application.Repositories
         {
             var watch = Stopwatch.StartNew();
 
+            List<GlobalParameter> parameters = null;
+
             string key = "GlobalParameters";
 
-            var db = _redis.GetDatabase((int)_redisSettings.Database);
+            if (_redisSettings.Enabled)
+            {
+                var db = _redis.GetDatabase((int)_redisSettings.Database);
 
-            List<GlobalParameter> parameters = await db.GetRecord<List<GlobalParameter>>(key);
+                parameters = await db.GetRecord<List<GlobalParameter>>(key);
+            }
 
             if (parameters is null)
             {
@@ -424,8 +403,13 @@ namespace DateTime.Application.Repositories
 
                 await GlobalParameter.FillValues(connection, parameters, token);
 
-                // кешируем ГП в памяти на 1 час, потом они снова обновятся
-                await db.SetRecord(key, parameters, TimeSpan.FromSeconds(600));
+                if (_redisSettings.Enabled)
+                {
+                    var db = _redis.GetDatabase((int)_redisSettings.Database);
+
+                    // кешируем ГП в памяти на 1 час, потом они снова обновятся
+                    await db.SetRecord(key, parameters, TimeSpan.FromSeconds(600));
+                }
             }
 
             watch.Stop();

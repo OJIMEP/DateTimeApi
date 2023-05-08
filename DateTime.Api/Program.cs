@@ -1,3 +1,4 @@
+using DateTime.Api.Filters;
 using DateTime.Application;
 using DateTime.Application.Database.DatabaseManagement;
 using DateTime.Application.Logging;
@@ -13,15 +14,23 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddApplication(builder.Configuration);
 
+builder.Services.AddScoped<LogActionFilter>();
+
+builder.Logging.ClearProviders();
+builder.Logging.AddProvider(new HttpLoggerProvider(builder.Configuration["loggerHost"],
+    builder.Configuration.GetValue<int>("loggerPortUdp"),
+    builder.Configuration.GetValue<int>("loggerPortHttp"),
+    builder.Configuration["loggerEnv"]));
+
 var app = builder.Build();
+
+app.UseRouting();
 
 // Configure the HTTP request pipeline.
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.UseHangfireDashboard();

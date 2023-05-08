@@ -1142,10 +1142,10 @@ GROUP BY
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'),KEEP PLAN, KEEPFIXED PLAN);
 
 Select 
-	IsNull(#Temp_AvailableCourier.article,#Temp_AvailablePickUp.article) AS article,
-	IsNull(#Temp_AvailableCourier.code,#Temp_AvailablePickUp.code) AS code,
-	IsNull(#Temp_AvailableCourier.ДатаКурьерскойДоставки,@P_MaxDate) AS available_date_courier,
-	IsNull(#Temp_AvailablePickUp.ВремяНачала,@P_MaxDate) AS available_date_self
+	IsNull(#Temp_AvailableCourier.article,#Temp_AvailablePickUp.article) AS Article,
+	IsNull(#Temp_AvailableCourier.code,#Temp_AvailablePickUp.code) AS Code,
+	IsNull(#Temp_AvailableCourier.ДатаКурьерскойДоставки,@P_MaxDate) AS Courier,
+	IsNull(#Temp_AvailablePickUp.ВремяНачала,@P_MaxDate) AS Self
 From
 	#Temp_AvailableCourier 
 	FULL Join #Temp_AvailablePickUp 

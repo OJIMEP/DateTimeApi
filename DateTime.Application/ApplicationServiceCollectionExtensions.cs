@@ -80,9 +80,16 @@ namespace DateTime.Application
 
             services.AddSingleton(redisSettings);
 
-            services.AddSingleton<IConnectionMultiplexer>(x =>
-                ConnectionMultiplexer.Connect(redisSettings.ConnectionString)
-            );
+            if (redisSettings.Enabled)
+            {
+                services.AddSingleton<IConnectionMultiplexer>(x =>
+                    ConnectionMultiplexer.Connect(redisSettings.ConnectionString)
+                );
+            }
+            else
+            {
+                services.AddSingleton<IConnectionMultiplexer>(x => null);
+            }
 
             return services;
         }

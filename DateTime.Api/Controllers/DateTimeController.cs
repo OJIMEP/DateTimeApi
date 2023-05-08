@@ -2,11 +2,13 @@
 using DateTime.Application.Repositories;
 using DateTime.Contracts.Requests;
 using DateTime.Api.Mapping;
+using DateTime.Api.Filters;
 
 namespace DateTime.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [ServiceFilter(typeof(LogActionFilter))]
     public class DateTimeController: ControllerBase
     {
         private readonly IDateTimeRepository _dateTimeRepository;

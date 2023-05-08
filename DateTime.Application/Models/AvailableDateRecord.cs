@@ -4,10 +4,10 @@
     {
         public required string Article { get; init; }
 
-        public string? Code { get; init; }
+        public required string Code { get; init; }
 
-        public DateTimeOffset Courier { get; init; }
+        public System.DateTime Courier { get; init; }
 
-        public DateTimeOffset Self { get; init; }
+        public System.DateTime Self { get; init; }
     }
 }
