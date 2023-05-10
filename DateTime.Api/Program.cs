@@ -15,7 +15,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
 
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddApi(builder.Configuration);
@@ -39,6 +38,9 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHangfireDashboard();
 

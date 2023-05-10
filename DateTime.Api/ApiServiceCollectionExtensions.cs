@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
+using Microsoft.OpenApi.Models;
 using System.Text;
 
 namespace DateTimeService.Api
@@ -14,7 +15,8 @@ namespace DateTimeService.Api
         {
             services
                 .AddAuthorizationAuthentication(configuration)
-                .AddScoped<IUserService, UserService>();
+                .AddScoped<IUserService, UserService>()
+                .AddSwagger();
 
             return services;
         }
@@ -81,6 +83,44 @@ namespace DateTimeService.Api
             services.AddAuthorization(builder =>
             {
                 builder.AddPolicy("Hangfire", policy => policy.RequireRole(UserRoles.Admin));
+            });
+
+            return services;
+        }
+    
+        public static IServiceCollection AddSwagger(this IServiceCollection services)
+        {
+            services.AddSwaggerGen(setup =>
+            {
+                var jwtSecurityScheme = new OpenApiSecurityScheme
+                {
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    Name = "JWT Authentication",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Description = "Put **_ONLY_** your JWT Bearer token on text-box below!",
+
+                    Reference = new OpenApiReference
+                    {
+                        Id = JwtBearerDefaults.AuthenticationScheme,
+                        Type = ReferenceType.SecurityScheme
+                    }
+                };
+
+                setup.AddSecurityDefinition(jwtSecurityScheme.Reference.Id, jwtSecurityScheme);
+
+                setup.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Version = "v2",
+                    Title = "Date-Time Api",
+                    Description = "Simple service to get info about delivery dates",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "Vasily Levkovsky",
+                        Email = "v.levkovskiy@21vek.by"
+                    }
+                });
             });
 
             return services;

@@ -3,14 +3,12 @@ using DateTimeService.Application.Cache;
 using DateTimeService.Application.Database;
 using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Diagnostics;
-using static Hangfire.Storage.JobStorageFeatures;
 
 namespace DateTimeService.Application.Repositories
 {
@@ -792,6 +790,5 @@ namespace DateTimeService.Application.Repositories
                 }
             }
         }
-
     }
 }
