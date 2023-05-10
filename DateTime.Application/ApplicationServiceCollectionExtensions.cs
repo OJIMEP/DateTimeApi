@@ -86,6 +86,7 @@ namespace DateTimeService.Application
                         ConnectionMultiplexer.Connect(new ConfigurationOptions
                         {
                             EndPoints = { redisSettings.ConnectionString },
+                            ConnectTimeout = 1,
                             DefaultDatabase = (int)redisSettings.Database,
                             AbortOnConnectFail = false
                         })
