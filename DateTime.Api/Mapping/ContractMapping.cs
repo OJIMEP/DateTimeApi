@@ -70,6 +70,21 @@ namespace DateTimeService.Api.Mapping
             return response;
         }
 
+        public static IntervalListResponse MapToIntervalListResponse(this IntervalListResult result)
+        {
+            var response = new IntervalListResponse
+            {
+                Data = result.Data.Select(item => new IntervalListElementResponse
+                {
+                    Begin = item.Begin,
+                    End = item.End,
+                    Bonus = item.Bonus
+                }).ToList()
+            };
+
+            return response;
+        }
+
         //123456 => 00-00123456
         private static string GetCodeFromSaleCode(string saleCode)
         {

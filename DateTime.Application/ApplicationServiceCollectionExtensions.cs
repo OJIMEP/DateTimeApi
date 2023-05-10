@@ -61,7 +61,7 @@ namespace DateTimeService.Application
 
         private static IServiceCollection AddHttpClients(this IServiceCollection services)
         {
-            //services.AddHttpClient<IGeoZones, GeoZones>();
+            services.AddTransient<IGeoZones, GeoZones>();
             services.AddHttpClient<ILogger, HttpLogger>();
 
             services.AddHttpClient<DatabaseCheckService>("elastic").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -78,18 +78,30 @@ namespace DateTimeService.Application
 
             configuration.GetSection(nameof(RedisSettings)).Bind(redisSettings);
 
-            services.AddSingleton(redisSettings);
-
             if (redisSettings.Enabled)
             {
-                services.AddSingleton<IConnectionMultiplexer>(x =>
-                    ConnectionMultiplexer.Connect(redisSettings.ConnectionString)
-                );
+                try
+                {
+                    services.AddSingleton<IConnectionMultiplexer>(x =>
+                        ConnectionMultiplexer.Connect(new ConfigurationOptions
+                        {
+                            EndPoints = { redisSettings.ConnectionString },
+                            DefaultDatabase = (int)redisSettings.Database,
+                            AbortOnConnectFail = false
+                        })
+                    );
+                }
+                catch {
+                    services.AddSingleton<IConnectionMultiplexer>(x => null);
+                    redisSettings.Enabled = false;
+                }            
             }
             else
             {
                 services.AddSingleton<IConnectionMultiplexer>(x => null);
             }
+
+            services.AddSingleton(redisSettings);
 
             return services;
         }

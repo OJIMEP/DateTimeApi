@@ -3,11 +3,14 @@ using DateTimeService.Application.Cache;
 using DateTimeService.Application.Database;
 using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Diagnostics;
+using static Hangfire.Storage.JobStorageFeatures;
 
 namespace DateTimeService.Application.Repositories
 {
@@ -15,15 +18,18 @@ namespace DateTimeService.Application.Repositories
     {
         private readonly IConfiguration _configuration;
         private readonly IDbConnectionFactory _dbConnectionFactory;
+        private readonly IGeoZones _geoZones;
         private readonly RedisSettings _redisSettings;
         private readonly IConnectionMultiplexer _redis;
 
-        public DateTimeRepository(IDbConnectionFactory dbConnectionFactory, RedisSettings redisSettings, IConnectionMultiplexer redis, IConfiguration configuration)
+        public DateTimeRepository(IDbConnectionFactory dbConnectionFactory, RedisSettings redisSettings, IConnectionMultiplexer redis, 
+            IConfiguration configuration, IGeoZones geoZones)
         {
             _dbConnectionFactory = dbConnectionFactory;
             _redisSettings = redisSettings;
             _redis = redis;
             _configuration = configuration;
+            _geoZones = geoZones;
         }
 
         public async Task<AvailableDateResult> GetAvailableDateAsync(AvailableDateQuery query, CancellationToken token = default)
@@ -182,15 +188,15 @@ namespace DateTimeService.Application.Repositories
                 pickupParameters.Add("NULL");
             }
 
-            var DateMove = System.DateTime.Now.AddMonths(24000);
+            var DateMove = DateTime.Now.AddMonths(24000);
 
             parameters.Add("@P_CityCode", query.CityId);
             parameters.Add("@P_DateTimeNow", DateMove);
             parameters.Add("@P_DateTimePeriodBegin", DateMove.Date);
             parameters.Add("@P_DateTimePeriodEnd", DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
-            parameters.Add("@P_TimeNow", new System.DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second));
-            parameters.Add("@P_EmptyDate", new System.DateTime(2001, 1, 1, 0, 0, 0));
-            parameters.Add("@P_MaxDate", new System.DateTime(5999, 11, 11, 0, 0, 0));
+            parameters.Add("@P_TimeNow", new DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second));
+            parameters.Add("@P_EmptyDate", new DateTime(2001, 1, 1, 0, 0, 0));
+            parameters.Add("@P_MaxDate", new DateTime(5999, 11, 11, 0, 0, 0));
             parameters.Add("@P_DaysToShow", 7);
             parameters.Add("@P_ApplyShifting", (int)globalParameters.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
             parameters.Add("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
@@ -220,6 +226,130 @@ namespace DateTimeService.Application.Repositories
                 globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 pickupWorkingHoursJoinType,
                 useIndexHint);
+
+            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
+            {
+                queryText = queryText.Replace(", KEEPFIXED PLAN", "");
+            }
+
+            return queryText;
+        }
+
+        public async Task<IntervalListResult> GetIntervalListAsync(IntervalListQuery query, CancellationToken token = default)
+        {
+            DbConnection dbConnection = await GetDbConnection(token: token);
+
+            bool adressExists;
+            string zoneId;
+            Stopwatch watch = Stopwatch.StartNew();
+
+            (adressExists, zoneId) = await _geoZones.CheckAddressGeozone(query, dbConnection.Connection);
+
+            watch.Stop();
+            //_contextAccessor.HttpContext.Items["TimeLocationExecution"] = watch.ElapsedMilliseconds;
+
+            if (!adressExists && zoneId == "")
+            {
+                throw new ValidationException("Адрес и геозона не найдены!");
+            }
+
+            IntervalListResult result;
+
+            result = await GetIntervalListFromDatabase(query, dbConnection, zoneId, token);
+
+            return result;
+        }
+
+        private async Task<IntervalListResult> GetIntervalListFromDatabase(IntervalListQuery query, DbConnection dbConnection, string zoneId, CancellationToken token = default)
+        {
+            var result = new IntervalListResult();
+
+            var globalParameters = await GetGlobalParameters(dbConnection.Connection);
+
+            var queryParameters = new DynamicParameters();
+
+            string queryText = IntervalListQueryText(query, globalParameters, queryParameters, dbConnection, zoneId);
+
+            Stopwatch watch = Stopwatch.StartNew();
+
+            try
+            {
+                var results = await dbConnection.Connection.QueryAsync<IntervalListRecord>(
+                    new CommandDefinition(queryText, queryParameters, cancellationToken: token)
+                );
+
+                foreach (var element in results)
+                {
+                    var begin = element.StartDate.AddMonths(-24000);
+                    var end = element.EndDate.AddMonths(-24000);
+                    var bonus = element.Bonus == 1;
+
+                    result.Data.Add(new IntervalListElementResult
+                    {
+                        Begin = begin,
+                        End = end,
+                        Bonus = bonus
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+            watch.Stop();
+            //_contextAccessor.HttpContext.Items["TimeSqlExecutionFact"] = watch.ElapsedMilliseconds;
+
+            return result;
+        }
+
+        private string IntervalListQueryText(IntervalListQuery query, List<GlobalParameter> globalParameters, DynamicParameters queryParameters, DbConnection dbConnection, string zoneId)
+        {
+            string queryText = IntervalListQueries.IntervalList;
+            
+            var queryTextBegin = TextFillGoodsTable(query, queryParameters);
+
+            var yourTimeDelivery = false;
+
+            if (query.DeliveryType == Constants.YourTimeDelivery)
+            {
+                query.DeliveryType = Constants.CourierDelivery;
+                yourTimeDelivery = true;
+            }
+
+            var DateMove = DateTime.Now.AddMonths(24000);
+
+            queryParameters.Add("@P_AdressCode", query.AddressId);
+            queryParameters.Add("@PickupPoint1", query.PickupPoint);
+            queryParameters.Add("@P_Credit", query.Payment == "partly_pay" ? 1 : 0);
+            queryParameters.Add("@P_Floor", (double)(query.Floor != null ? query.Floor : globalParameters.GetValue("Логистика_ЭтажПоУмолчанию")));
+            queryParameters.Add("@P_DaysToShow", 7);
+            queryParameters.Add("@P_DateTimeNow", DateMove);
+            queryParameters.Add("@P_DateTimePeriodBegin", DateMove.Date);
+            queryParameters.Add("@P_DateTimePeriodEnd", DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
+            queryParameters.Add("@P_TimeNow", new DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second));
+            queryParameters.Add("@P_EmptyDate", new DateTime(2001, 1, 1, 0, 0, 0));
+            queryParameters.Add("@P_MaxDate", new DateTime(5999, 11, 11, 0, 0, 0));
+            queryParameters.Add("@P_GeoCode", zoneId);
+            queryParameters.Add("@P_OrderDate", query.OrderDate.AddMonths(24000));
+            queryParameters.Add("@P_OrderNumber", query.OrderNumber);
+            queryParameters.Add("@P_ApplyShifting", (int)globalParameters.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            queryParameters.Add("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            queryParameters.Add("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
+            queryParameters.Add("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
+
+            string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
+                ? DateMove.ToString("yyyy-MM-ddTHH:00:00")
+                : DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
+
+            queryText = queryTextBegin + string.Format(queryText,
+                "",
+                dateTimeNowOptimizeString,
+                DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
+                DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
+                globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
+                globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
+                dbConnection.DatabaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("useIndexHintWarehouseDates") : ""); // index hint
 
             if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
             {
@@ -319,6 +449,31 @@ namespace DateTimeService.Application.Repositories
             return resultString;
         }
 
+        private static string TextFillGoodsTable(IntervalListQuery query, DynamicParameters queryParameters)
+        {
+            var resultString = CommonQueries.TableGoodsRawCreate;
+
+            var parameters = query.OrderItems.Select((item, index) =>
+            {
+                var article = $"@Article{index}";
+                var code = $"@Code{index}";
+                var quantity = $"@Quantity{index}";
+
+                queryParameters.Add(article, item.Article);
+                queryParameters.Add(code, string.IsNullOrEmpty(item.Code) ? null : item.Code);
+                queryParameters.Add(quantity, item.Quantity);
+
+                return $"({article}, {code}, NULL, {quantity})";
+            }).ToList();
+
+            if (parameters.Count > 0)
+            {
+                resultString += string.Format(CommonQueries.TableGoodsRawInsert, string.Join(", ", parameters));
+            }
+
+            return resultString;
+        }
+
         private async Task<DbConnection> GetDbConnection(CancellationToken token = default, bool logging = true)
         {
             DbConnection dbConnection;
@@ -353,7 +508,8 @@ namespace DateTimeService.Application.Repositories
 
             string key = "GlobalParameters";
 
-            if (_redisSettings.Enabled)
+            if (_redisSettings.Enabled
+                && _redis.IsConnected)
             {
                 var db = _redis.GetDatabase((int)_redisSettings.Database);
 
@@ -404,7 +560,8 @@ namespace DateTimeService.Application.Repositories
 
                 await GlobalParameter.FillValues(connection, parameters, token);
 
-                if (_redisSettings.Enabled)
+                if (_redisSettings.Enabled
+                    && _redis.IsConnected)
                 {
                     var db = _redis.GetDatabase((int)_redisSettings.Database);
 
@@ -421,7 +578,7 @@ namespace DateTimeService.Application.Repositories
 
         private async Task SaveToCache(AvailableDateResult result, string cityId)
         {
-            if (!_redisSettings.Enabled)
+            if (!_redisSettings.Enabled || !_redis.IsConnected)
             {
                 return;
             }
@@ -442,7 +599,7 @@ namespace DateTimeService.Application.Repositories
         {
             var result = new AvailableDateResult();
 
-            if (!_redisSettings.Enabled)
+            if (!_redisSettings.Enabled || !_redis.IsConnected)
             {
                 return result;
             }

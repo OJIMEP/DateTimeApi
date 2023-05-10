@@ -37,7 +37,7 @@ namespace DateTimeService.Api.Controllers
 
             var result = await _dateTimeRepository.GetIntervalListAsync(query, token);
 
-            return Ok(result.MapToAvailableDateResponse());
+            return Ok(result.MapToIntervalListResponse());
         }
     }
 }

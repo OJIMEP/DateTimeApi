@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DateTime.Application\DateTime.Application.csproj" />
-    <ProjectReference Include="..\DateTime.Contracts\DateTime.Contracts.csproj" />
+    <ProjectReference Include="..\DateTime.Application\DateTimeService.Application.csproj" />
+    <ProjectReference Include="..\DateTime.Contracts\DateTimeService.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

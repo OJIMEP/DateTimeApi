@@ -6,8 +6,8 @@
 
         public required string Code { get; init; }
 
-        public System.DateTime Courier { get; init; }
+        public DateTime Courier { get; init; }
 
-        public System.DateTime Self { get; init; }
+        public DateTime Self { get; init; }
     }
 }
