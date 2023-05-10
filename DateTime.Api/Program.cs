@@ -1,4 +1,5 @@
 using DateTimeService.Api.Filters;
+using DateTimeService.Api.Middlewares;
 using DateTimeService.Application;
 using DateTimeService.Application.Database.DatabaseManagement;
 using DateTimeService.Application.Logging;
@@ -15,6 +16,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddApplication(builder.Configuration);
 
 builder.Services.AddScoped<LogActionFilter>();
+builder.Services.AddTransient<GlobalExceptionHandlingMiddleware>();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddProvider(new HttpLoggerProvider(builder.Configuration["loggerHost"],
@@ -34,6 +36,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.UseHangfireDashboard();
+
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 try
 {

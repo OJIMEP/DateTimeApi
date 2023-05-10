@@ -34,6 +34,28 @@ namespace DateTimeService.Api.Mapping
             };
         }
 
+        public static AvailableDeliveryTypesQuery MapToAvailableDeliveryTypesQuery(this AvailableDeliveryTypesRequest request)
+        {
+            return new AvailableDeliveryTypesQuery
+            {
+                CityId = request.CityId,
+                PickupPoints = request.PickupPoints,
+                OrderItems = request.OrderItems.Select(item => item.MapToAvailableDeliveryTypesElementQuery()).ToList()
+
+            };
+        }
+
+        public static AvailableDeliveryTypesElementQuery MapToAvailableDeliveryTypesElementQuery(this AvailableDeliveryTypesItemRequest request)
+        {
+            return new AvailableDeliveryTypesElementQuery
+            {
+                Article = request.Code,
+                SalesCode = request.SalesCode,
+                Quantity = request.Quantity,
+                Code = request.SalesCode == null ? null : GetCodeFromSaleCode(request.SalesCode)
+            };
+        }
+
         public static CodeItemQuery MapToCodeItemQuery(this CodeItemRequest request)
         {
             return new CodeItemQuery
@@ -81,6 +103,16 @@ namespace DateTimeService.Api.Mapping
                     Bonus = item.Bonus
                 }).ToList()
             };
+
+            return response;
+        }
+
+        public static AvailableDeliveryTypesResponse MapToAvailableDeliveryTypesResponse(this AvailableDeliveryTypesResult result)
+        {
+            var response = new AvailableDeliveryTypesResponse();
+            response.Courier.IsAvailable = result.Courier;
+            response.Self.IsAvailable = result.Self;
+            response.YourTime.IsAvailable = result.YourTime;
 
             return response;
         }

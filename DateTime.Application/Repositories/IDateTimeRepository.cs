@@ -7,5 +7,7 @@ namespace DateTimeService.Application.Repositories
         Task<AvailableDateResult> GetAvailableDateAsync(AvailableDateQuery query, CancellationToken token = default); 
 
         Task<IntervalListResult> GetIntervalListAsync(IntervalListQuery query, CancellationToken token = default);
+
+        Task<AvailableDeliveryTypesResult> GetAvailableDeliveryTypesAsync(AvailableDeliveryTypesQuery query, CancellationToken token = default);
     }
 }

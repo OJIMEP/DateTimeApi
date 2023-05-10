@@ -39,5 +39,16 @@ namespace DateTimeService.Api.Controllers
 
             return Ok(result.MapToIntervalListResponse());
         }
+
+        [HttpPost("AvailableDeliveryTypes")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> GetAvailableDeliveryTypesAsync(AvailableDeliveryTypesRequest request, CancellationToken token = default)
+        {
+            var query = request.MapToAvailableDeliveryTypesQuery();
+
+            var result = await _dateTimeRepository.GetAvailableDeliveryTypesAsync(query, token);
+
+            return Ok(result.MapToAvailableDeliveryTypesResponse());
+        }
     }
 }

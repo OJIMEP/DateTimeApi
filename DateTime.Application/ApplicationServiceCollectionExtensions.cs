@@ -43,6 +43,7 @@ namespace DateTimeService.Application
         private static IServiceCollection AddRepositories(this IServiceCollection services)
         {
             services.AddSingleton<IDateTimeRepository, DateTimeRepository>();
+            services.AddTransient<IGeoZones, GeoZones>();
 
             return services;
         }
@@ -61,7 +62,6 @@ namespace DateTimeService.Application
 
         private static IServiceCollection AddHttpClients(this IServiceCollection services)
         {
-            services.AddTransient<IGeoZones, GeoZones>();
             services.AddHttpClient<ILogger, HttpLogger>();
 
             services.AddHttpClient<DatabaseCheckService>("elastic").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
