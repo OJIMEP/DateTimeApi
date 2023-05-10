@@ -1,11 +1,11 @@
-﻿using DateTime.Application.Logging;
+﻿using DateTimeService.Application.Logging;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace DateTime.Api.Filters
+namespace DateTimeService.Api.Filters
 {
     public class LogActionFilter : IActionFilter
     {

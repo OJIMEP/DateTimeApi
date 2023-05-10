@@ -1,4 +1,4 @@
-﻿namespace DateTime.Application.Database
+﻿namespace DateTimeService.Application.Database
 {
     public static class DbCheckQueries
     {

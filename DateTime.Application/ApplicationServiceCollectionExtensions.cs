@@ -1,8 +1,8 @@
-﻿using DateTime.Application.Cache;
-using DateTime.Application.Database;
-using DateTime.Application.Database.DatabaseManagement;
-using DateTime.Application.Logging;
-using DateTime.Application.Repositories;
+﻿using DateTimeService.Application.Cache;
+using DateTimeService.Application.Database;
+using DateTimeService.Application.Database.DatabaseManagement;
+using DateTimeService.Application.Logging;
+using DateTimeService.Application.Repositories;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
-namespace DateTime.Application
+namespace DateTimeService.Application
 {
     public static class ApplicationServiceCollectionExtensions
     {

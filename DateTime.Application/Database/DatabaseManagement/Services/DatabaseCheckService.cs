@@ -7,10 +7,10 @@ using System.Net;
 using System.Text.Json;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using DateTime.Application.Database.DatabaseManagement.Elastic;
-using DateTime.Application.Logging;
+using DateTimeService.Application.Database.DatabaseManagement.Elastic;
+using DateTimeService.Application.Logging;
 
-namespace DateTime.Application.Database.DatabaseManagement
+namespace DateTimeService.Application.Database.DatabaseManagement
 {
     public class DatabaseCheckService: IDatabaseCheck
     {

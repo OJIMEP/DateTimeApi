@@ -1,4 +1,4 @@
-﻿namespace DateTime.Application.Database.DatabaseManagement
+﻿namespace DateTimeService.Application.Database.DatabaseManagement
 {
     public interface IDatabaseAvailabilityControl
     {

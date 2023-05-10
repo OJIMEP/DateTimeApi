@@ -1,4 +1,4 @@
-﻿namespace DateTime.Application.Models
+﻿namespace DateTimeService.Application.Models
 {
     public class AvailableDateQuery
     {

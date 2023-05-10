@@ -1,7 +1,7 @@
-using DateTime.Api.Filters;
-using DateTime.Application;
-using DateTime.Application.Database.DatabaseManagement;
-using DateTime.Application.Logging;
+using DateTimeService.Api.Filters;
+using DateTimeService.Application;
+using DateTimeService.Application.Database.DatabaseManagement;
+using DateTimeService.Application.Logging;
 using Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);

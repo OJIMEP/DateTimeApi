@@ -1,9 +1,9 @@
-﻿using DateTime.Application.Logging;
+﻿using DateTimeService.Application.Logging;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
-namespace DateTime.Application.Database.DatabaseManagement
+namespace DateTimeService.Application.Database.DatabaseManagement
 {
     public class ReadableDatabasesService: IReadableDatabase
     {

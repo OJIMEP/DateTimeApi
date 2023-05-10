@@ -1,4 +1,4 @@
-﻿namespace DateTime.Application.Cache
+﻿namespace DateTimeService.Application.Cache
 {
     public class RedisSettings
     {

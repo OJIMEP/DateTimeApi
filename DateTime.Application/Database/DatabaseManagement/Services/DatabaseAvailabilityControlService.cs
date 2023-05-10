@@ -1,10 +1,10 @@
-﻿using DateTime.Application.Logging;
+﻿using DateTimeService.Application.Logging;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-namespace DateTime.Application.Database.DatabaseManagement
+namespace DateTimeService.Application.Database.DatabaseManagement
 {
     public class DatabaseAvailabilityControlService : IDatabaseAvailabilityControl
     {

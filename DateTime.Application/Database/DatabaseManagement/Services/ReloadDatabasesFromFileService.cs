@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace DateTime.Application.Database.DatabaseManagement
+namespace DateTimeService.Application.Database.DatabaseManagement
 {
     public class ReloadDatabasesFromFileService : IReloadDatabasesService
     {

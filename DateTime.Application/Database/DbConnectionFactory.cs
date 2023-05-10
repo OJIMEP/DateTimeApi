@@ -1,8 +1,8 @@
-﻿using DateTime.Application.Database.DatabaseManagement;
+﻿using DateTimeService.Application.Database.DatabaseManagement;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 
-namespace DateTime.Application.Database
+namespace DateTimeService.Application.Database
 {
     public interface IDbConnectionFactory
     {

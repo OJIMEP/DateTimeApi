@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 
-namespace DateTime.Application.Database
+namespace DateTimeService.Application.Database
 {
     public class DbConnection
     {

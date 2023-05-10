@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace DateTime.Application.Models
+namespace DateTimeService.Application.Models
 {
     public static class GlobalParamListExtensions
     {

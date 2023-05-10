@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace DateTime.Contracts.Responses
+namespace DateTimeService.Contracts.Responses
 {
     public class AvailableDateResponse
     {

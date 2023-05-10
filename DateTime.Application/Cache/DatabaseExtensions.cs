@@ -1,7 +1,7 @@
 ﻿using StackExchange.Redis;
 using System.Text.Json;
 
-namespace DateTime.Application.Cache
+namespace DateTimeService.Application.Cache
 {
     public static class DatabaseExtensions
     {

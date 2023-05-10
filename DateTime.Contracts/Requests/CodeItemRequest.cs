@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace DateTime.Contracts.Requests
+namespace DateTimeService.Contracts.Requests
 {
     public class CodeItemRequest
     {

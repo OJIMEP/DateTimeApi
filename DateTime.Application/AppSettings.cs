@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace DateTime.Application
+namespace DateTimeService.Application
 {
     public static class AppSettings
     {

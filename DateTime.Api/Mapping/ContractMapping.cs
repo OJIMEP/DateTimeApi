@@ -1,8 +1,8 @@
-﻿using DateTime.Application.Models;
-using DateTime.Contracts.Requests;
-using DateTime.Contracts.Responses;
+﻿using DateTimeService.Application.Models;
+using DateTimeService.Contracts.Requests;
+using DateTimeService.Contracts.Responses;
 
-namespace DateTime.Api.Mapping
+namespace DateTimeService.Api.Mapping
 {
     public static class ContractMapping
     {
@@ -14,6 +14,23 @@ namespace DateTime.Api.Mapping
                 DeliveryTypes = request.DeliveryTypes,
                 CheckQuantity = request.CheckQuantity,
                 Codes = request.CodeItems.Select(item => item.MapToCodeItemQuery()).ToList()
+            };
+        }
+
+        public static IntervalListQuery MapToIntervalListQuery(this IntervalListRequest request)
+        {
+            return new IntervalListQuery
+            {
+                AddressId = request.AddressId,
+                DeliveryType = request.DeliveryType,
+                PickupPoint = request.PickupPoint,
+                Floor = request.Floor,
+                Payment = request.Payment,
+                OrderNumber = request.OrderNumber,
+                OrderDate = request.OrderDate,
+                Xcoordinate = request.Xcoordinate,
+                Ycoordinate = request.Ycoordinate,
+                OrderItems = request.OrderItems.Select(item => item.MapToCodeItemQuery()).ToList()
             };
         }
 

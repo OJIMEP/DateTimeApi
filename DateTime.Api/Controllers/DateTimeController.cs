@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using DateTime.Application.Repositories;
-using DateTime.Contracts.Requests;
-using DateTime.Api.Mapping;
-using DateTime.Api.Filters;
+using DateTimeService.Application.Repositories;
+using DateTimeService.Contracts.Requests;
+using DateTimeService.Api.Mapping;
+using DateTimeService.Api.Filters;
 
-namespace DateTime.Api.Controllers
+namespace DateTimeService.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -26,6 +26,17 @@ namespace DateTime.Api.Controllers
 
             var result = await _dateTimeRepository.GetAvailableDateAsync(query, token);
             
+            return Ok(result.MapToAvailableDateResponse());
+        }
+
+        [HttpPost("IntervalList")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> GetIntervalListAsync(IntervalListRequest request, CancellationToken token = default)
+        {
+            var query = request.MapToIntervalListQuery();
+
+            var result = await _dateTimeRepository.GetIntervalListAsync(query, token);
+
             return Ok(result.MapToAvailableDateResponse());
         }
     }

@@ -1,15 +1,15 @@
 ﻿using Dapper;
-using DateTime.Application.Cache;
-using DateTime.Application.Database;
-using DateTime.Application.Models;
-using DateTime.Application.Queries;
+using DateTimeService.Application.Cache;
+using DateTimeService.Application.Database;
+using DateTimeService.Application.Models;
+using DateTimeService.Application.Queries;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using System.Data;
 using System.Diagnostics;
 
-namespace DateTime.Application.Repositories
+namespace DateTimeService.Application.Repositories
 {
     public class DateTimeRepository : IDateTimeRepository
     {
@@ -64,6 +64,7 @@ namespace DateTime.Application.Repositories
             
             return result;
         }
+        
         public async Task<AvailableDateResult> GetAvailableDateFromDatabase(AvailableDateQuery query, CancellationToken token = default)
         {
             DbConnection dbConnection = await GetDbConnection(token: token);

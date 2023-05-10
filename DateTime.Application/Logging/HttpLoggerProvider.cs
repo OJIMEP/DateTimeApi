@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace DateTime.Application.Logging
+namespace DateTimeService.Application.Logging
 {
     public class HttpLoggerProvider : ILoggerProvider
     {

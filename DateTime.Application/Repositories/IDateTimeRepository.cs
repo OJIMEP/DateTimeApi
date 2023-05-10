@@ -1,6 +1,6 @@
-﻿using DateTime.Application.Models;
+﻿using DateTimeService.Application.Models;
 
-namespace DateTime.Application.Repositories
+namespace DateTimeService.Application.Repositories
 {
     public interface IDateTimeRepository
     {

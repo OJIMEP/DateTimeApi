@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 
-namespace DateTime.Application.Logging
+namespace DateTimeService.Application.Logging
 {
     public class HttpLogger : ILogger
     {

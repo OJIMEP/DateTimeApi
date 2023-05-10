@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33516.290
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DateTime.Api", "DateTime.Api\DateTime.Api.csproj", "{8E4B9F94-C94A-4817-B5FA-F4A7AA685C5B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DateTimeService.Api", "DateTime.Api\DateTimeService.Api.csproj", "{8E4B9F94-C94A-4817-B5FA-F4A7AA685C5B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DateTime.Application", "DateTime.Application\DateTime.Application.csproj", "{FE01E453-20CF-4E1A-B1BE-5634DE52EE79}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DateTimeService.Application", "DateTime.Application\DateTimeService.Application.csproj", "{FE01E453-20CF-4E1A-B1BE-5634DE52EE79}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DateTime.Contracts", "DateTime.Contracts\DateTime.Contracts.csproj", "{99AF6C2A-FE98-43FA-88FC-6CECEF7AF649}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DateTimeService.Contracts", "DateTime.Contracts\DateTimeService.Contracts.csproj", "{99AF6C2A-FE98-43FA-88FC-6CECEF7AF649}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

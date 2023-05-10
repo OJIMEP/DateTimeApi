@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace DateTime.Application.Database.DatabaseManagement.Elastic
+namespace DateTimeService.Application.Database.DatabaseManagement.Elastic
 {
     public class Response
     {

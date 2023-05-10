@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace DateTime.Application.Logging
+namespace DateTimeService.Application.Logging
 {
     public class ElasticLogMessage
     {
