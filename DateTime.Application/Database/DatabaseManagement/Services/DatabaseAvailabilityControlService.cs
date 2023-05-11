@@ -1,4 +1,5 @@
-﻿using DateTimeService.Application.Logging;
+﻿using DateTimeService.Api;
+using DateTimeService.Application.Logging;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -122,7 +123,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             else
             {
-                _logger.LogWarning("Check and update perfomance - no elastic logs");
+                _logger.LogElastic("Check and update perfomance - no elastic logs");
             }
         }
 
@@ -210,9 +211,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     DatabaseConnection = databaseInfo.ConnectionWithoutCredentials
                 };
 
-                var logstringElement = JsonSerializer.Serialize(logElement);
-
-                _logger.LogInformation(logstringElement);
+                _logger.LogElastic(logElement);
 
                 result = true;
             }
@@ -225,9 +224,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     DatabaseConnection = databaseInfo.ConnectionWithoutCredentials
                 };
 
-                var logstringElement = JsonSerializer.Serialize(logElement);
-
-                _logger.LogError(logstringElement);
+                _logger.LogElastic(logElement);
 
                 result = false;
             }

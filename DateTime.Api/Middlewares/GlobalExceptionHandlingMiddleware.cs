@@ -1,7 +1,6 @@
 ﻿using DateTimeService.Application.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Text.Json;
 
 namespace DateTimeService.Api.Middlewares
 {
@@ -30,7 +29,7 @@ namespace DateTimeService.Api.Middlewares
 
                 logElement.FillFromHttpContext(context);
 
-                _logger.LogInformation(JsonSerializer.Serialize(logElement));
+                _logger.LogElastic(logElement);
 
                 if (ex is ValidationException)
                 {

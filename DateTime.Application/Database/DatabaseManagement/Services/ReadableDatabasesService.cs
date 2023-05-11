@@ -1,4 +1,5 @@
-﻿using DateTimeService.Application.Logging;
+﻿using DateTimeService.Api;
+using DateTimeService.Application.Logging;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -45,7 +46,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Adding database failed", ex);
+                _logger.LogElastic("Adding database failed", ex);
                 addResult = false;
             }
 
@@ -73,7 +74,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             catch (Exception ex)
             {
                 removeResult = false;
-                _logger.LogWarning("Deleting database failed", ex);
+                _logger.LogElastic("Deleting database failed", ex);
             }
 
             return removeResult;
@@ -110,7 +111,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -149,7 +150,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -187,7 +188,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -225,7 +226,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -296,7 +297,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -345,7 +346,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -375,7 +376,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -404,7 +405,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -433,7 +434,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -462,7 +463,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -501,7 +502,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Updating database failed", ex);
+                _logger.LogElastic("Updating database failed", ex);
                 updateResult = false;
             }
 
@@ -519,9 +520,8 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             };
 
             logElement.AdditionalData.Add("UpdateCause", updateDesc);
-            var logstringElement = JsonSerializer.Serialize(logElement);
-
-            _logger.LogInformation(logstringElement);
+            
+            _logger.LogElastic(logElement);
         }
     }
 }

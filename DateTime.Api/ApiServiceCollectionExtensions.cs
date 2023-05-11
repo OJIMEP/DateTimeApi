@@ -1,4 +1,6 @@
 ﻿using AuthLibrary.Data;
+using DateTimeService.Api.Filters;
+using DateTimeService.Api.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +18,9 @@ namespace DateTimeService.Api
             services
                 .AddAuthorizationAuthentication(configuration)
                 .AddScoped<IUserService, UserService>()
-                .AddSwagger();
+                .AddSwagger()
+                .AddScoped<LogActionFilter>()
+                .AddTransient<GlobalExceptionHandlingMiddleware>();
 
             return services;
         }

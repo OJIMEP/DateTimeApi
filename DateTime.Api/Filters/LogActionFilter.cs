@@ -31,7 +31,7 @@ namespace DateTimeService.Api.Filters
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error in LogActionFilter", ex);
+                _logger.LogElastic("Error in LogActionFilter", ex);
             }
         }
 
@@ -70,7 +70,7 @@ namespace DateTimeService.Api.Filters
                 logElement.ErrorDescription = internalError.Value.ToString();
             }
 
-            _logger.LogInformation(JsonSerializer.Serialize(logElement));
+            _logger.LogElastic(logElement);
         }
 
         public string FormatRequestBody(IDictionary<string, object> actionArguments)
@@ -82,7 +82,7 @@ namespace DateTimeService.Api.Filters
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error in LogActionFilter", ex);
+                _logger.LogElastic("Error in LogActionFilter", ex);
             }
             return "";
         }

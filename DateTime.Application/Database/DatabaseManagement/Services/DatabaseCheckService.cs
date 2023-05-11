@@ -9,6 +9,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using DateTimeService.Application.Database.DatabaseManagement.Elastic;
 using DateTimeService.Application.Logging;
+using DateTimeService.Api;
 
 namespace DateTimeService.Application.Database.DatabaseManagement
 {
@@ -74,9 +75,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     DatabaseConnection = databaseInfo.ConnectionWithoutCredentials
                 };
 
-                var logstringElement = JsonSerializer.Serialize(logElement);
-
-                _logger.LogInformation(logstringElement);
+                _logger.LogElastic(logElement);
 
             }
             watch.Stop();
@@ -244,9 +243,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     DatabaseConnection = databaseInfo.ConnectionWithoutCredentials
                 };
 
-                var logstringElement = JsonSerializer.Serialize(logElement);
-
-                _logger.LogInformation(logstringElement);
+                _logger.LogElastic(logElement);
             }
             watch.Stop();
 
@@ -261,9 +258,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     DatabaseConnection = databaseInfo.ConnectionWithoutCredentials
                 };
 
-                var logstringElement = JsonSerializer.Serialize(logElement);
-
-                _logger.LogInformation(logstringElement);
+                _logger.LogElastic(logElement);
             }
 
             return result >= 0;
@@ -390,9 +385,8 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     };
 
                     logElement.AdditionalData.Add("requestContent", content);
-                    var logstringElement = JsonSerializer.Serialize(logElement);
-
-                    _logger.LogError(logstringElement);
+                    
+                    _logger.LogElastic(logElement);
                 }
             }
             catch (Exception ex)
@@ -404,9 +398,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     DatabaseConnection = elasticUri.ToString()
                 };
 
-                var logstringElement = JsonSerializer.Serialize(logElement);
-
-                _logger.LogError(logstringElement);
+                _logger.LogElastic(logElement);
             }
 
             try
@@ -425,9 +417,8 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     DatabaseConnection = elasticUri.ToString()
                 };
                 logElement.AdditionalData.Add("responseContent", result);
-                var logstringElement = JsonSerializer.Serialize(logElement);
-
-                _logger.LogError(logstringElement);
+                
+                _logger.LogElastic(logElement);
             }
 
             if (elasticResponse is null)
@@ -437,7 +428,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
             if (!elasticResponse.Aggregations.TryGetValue("load_time_outlier", out Aggregations? aggregation))
             {
-                _logger.LogError("Aggregation load_time_outlier not found in Elastic response");
+                _logger.LogElastic("Aggregation load_time_outlier not found in Elastic response");
                 return null;
             }
 
@@ -446,7 +437,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             {
                 if (_productionEnv)
                 {
-                    _logger.LogError($"Database with key {connectionWithOutCredentials} has no logs in Elastic!");
+                    _logger.LogElastic($"Database with key {connectionWithOutCredentials} has no logs in Elastic!");
                 }
                 return null;
             }
@@ -463,7 +454,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             {
                 if (_productionEnv)
                 {
-                    _logger.LogError($"db stats for {connectionWithOutCredentials} is empty");
+                    _logger.LogElastic($"db stats for {connectionWithOutCredentials} is empty");
                 }
 
                 return null;

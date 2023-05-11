@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DateTimeService.Api;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace DateTimeService.Application.Database.DatabaseManagement
@@ -30,7 +31,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
             if (!result)
             {
-                _logger.LogError("Database reloading from file failed!");
+                _logger.LogElastic("Database reloading from file failed!");
             }
         }
     }

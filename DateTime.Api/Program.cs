@@ -1,12 +1,14 @@
 using AuthLibrary.Data;
 using DateTimeService.Api;
-using DateTimeService.Api.Filters;
 using DateTimeService.Api.Middlewares;
 using DateTimeService.Application;
 using DateTimeService.Application.Database.DatabaseManagement;
 using DateTimeService.Application.Logging;
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
+using Serilog;
+using Serilog.Filters;
+using Serilog.Formatting.Elasticsearch;
 using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,14 +21,23 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddApi(builder.Configuration);
 
-builder.Services.AddScoped<LogActionFilter>();
-builder.Services.AddTransient<GlobalExceptionHandlingMiddleware>();
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .WriteTo.Http(
+        requestUri: builder.Configuration["ElasticConfiguration:Uri"], 60000, textFormatter: new ElasticsearchJsonFormatter(inlineFields: true)
+        )
+    .Filter.ByIncludingOnly(Matching.WithProperty<string>("SourceContext", s => s.Contains("DateTimeService")))
+    .Enrich.WithProperty("Environment", builder.Configuration["loggerEnv"])
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
 
-builder.Logging.ClearProviders();
-builder.Logging.AddProvider(new HttpLoggerProvider(builder.Configuration["loggerHost"],
-    builder.Configuration.GetValue<int>("loggerPortUdp"),
-    builder.Configuration.GetValue<int>("loggerPortHttp"),
-    builder.Configuration["loggerEnv"]));
+builder.Host.UseSerilog(Log.Logger);
+
+//builder.Logging.ClearProviders();
+//builder.Logging.AddProvider(new HttpLoggerProvider(builder.Configuration["loggerHost"],
+//    builder.Configuration.GetValue<int>("loggerPortUdp"),
+//    builder.Configuration.GetValue<int>("loggerPortHttp"),
+//    builder.Configuration["loggerEnv"]));
 
 var app = builder.Build();
 
@@ -96,8 +107,8 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        var db = services.GetRequiredService<DateTimeServiceContext>();
-        await RoleInitializer.CleanTokensAsync(db);
+        //var db = services.GetRequiredService<DateTimeServiceContext>();
+        //await RoleInitializer.CleanTokensAsync(db);
     }
     catch (Exception ex)
     {
