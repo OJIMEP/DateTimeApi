@@ -4,6 +4,7 @@ using DateTimeService.Api.Middlewares;
 using DateTimeService.Application;
 using DateTimeService.Application.Database.DatabaseManagement;
 using Hangfire;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 using Serilog.Formatting.Elasticsearch;
@@ -14,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 // Add services to the container.
+builder.Services.AddCors();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -38,11 +40,18 @@ builder.Host.UseSerilog(Log.Logger);
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseCors(builder => builder.AllowAnyHeader()
+    .AllowAnyMethod()
+    .SetIsOriginAllowedToAllowWildcardSubdomains()
+    .WithOrigins(configuration.GetSection("CorsOrigins").Get<List<string>>().ToArray()));
+
 app.UseRouting();
 
-// Configure the HTTP request pipeline.
-
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -54,13 +63,13 @@ app.UseHangfireDashboard();
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
-//app.Use(async (context, next) =>
-//{
-//    // создаем новый экземпляр ConcurrentDictionary для каждого запроса
-//    context.Items[typeof(ConcurrentDictionary<object, object>)] = new ConcurrentDictionary<object, object>();
+app.Use(async (context, next) =>
+{
+    // создаем новый экземпляр ConcurrentDictionary для каждого запроса
+    context.Items[typeof(ConcurrentDictionary<object, object>)] = new ConcurrentDictionary<object, object>();
 
-//    await next();
-//});
+    await next();
+});
 
 try
 {

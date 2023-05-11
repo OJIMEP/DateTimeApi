@@ -28,7 +28,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
 
-            _productionEnv = "" == "Production";          
+            _productionEnv = configuration["Environment"] == "Production";          
         }
 
         public async Task<bool> CheckAggregationsAsync(DatabaseInfo databaseInfo, CancellationToken cancellationToken)
