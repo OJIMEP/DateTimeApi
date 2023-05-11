@@ -3,7 +3,6 @@ using DateTimeService.Application.Logging;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace DateTimeService.Application.Database.DatabaseManagement
 {

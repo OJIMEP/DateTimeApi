@@ -3,41 +3,38 @@ using DateTimeService.Api;
 using DateTimeService.Api.Middlewares;
 using DateTimeService.Application;
 using DateTimeService.Application.Database.DatabaseManagement;
-using DateTimeService.Application.Logging;
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
-using Serilog.Filters;
 using Serilog.Formatting.Elasticsearch;
 using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var configuration = builder.Configuration;
 
 // Add services to the container.
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddApplication(builder.Configuration);
-builder.Services.AddApi(builder.Configuration);
+builder.Services.AddApplication(configuration);
+builder.Services.AddApi(configuration);
+
+builder.Services.AddHttpContextAccessor();
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Http(
-        requestUri: builder.Configuration["ElasticConfiguration:Uri"], 60000, textFormatter: new ElasticsearchJsonFormatter(inlineFields: true)
+        requestUri: configuration["ElasticConfiguration:Uri"], null, textFormatter: new ElasticsearchJsonFormatter(inlineFields: true)
         )
-    .Filter.ByIncludingOnly(Matching.WithProperty<string>("SourceContext", s => s.Contains("DateTimeService")))
-    .Enrich.WithProperty("Environment", builder.Configuration["loggerEnv"])
-    .ReadFrom.Configuration(builder.Configuration)
+    //.Filter.ByIncludingOnly(Matching.WithProperty<string>("SourceContext", s => s.Contains("DateTimeService")))
+    .Enrich.WithProperty("Environment", configuration["Environment"])
+    .Enrich.WithProperty("ServiceName", "DateTime")
+    .ReadFrom.Configuration(configuration)
     .CreateLogger();
 
 builder.Host.UseSerilog(Log.Logger);
-
-//builder.Logging.ClearProviders();
-//builder.Logging.AddProvider(new HttpLoggerProvider(builder.Configuration["loggerHost"],
-//    builder.Configuration.GetValue<int>("loggerPortUdp"),
-//    builder.Configuration.GetValue<int>("loggerPortHttp"),
-//    builder.Configuration["loggerEnv"]));
 
 var app = builder.Build();
 
@@ -97,7 +94,6 @@ using (var scope = app.Services.CreateScope())
     {
         var userManager = services.GetRequiredService<UserManager<DateTimeServiceUser>>();
         var rolesManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        var configuration = services.GetRequiredService<IConfiguration>();
         await RoleInitializer.InitializeAsync(userManager, rolesManager, configuration);
     }
     catch (Exception ex)

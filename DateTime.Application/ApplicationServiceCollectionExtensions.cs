@@ -1,13 +1,11 @@
 ﻿using DateTimeService.Application.Cache;
 using DateTimeService.Application.Database;
 using DateTimeService.Application.Database.DatabaseManagement;
-using DateTimeService.Application.Logging;
 using DateTimeService.Application.Repositories;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
 namespace DateTimeService.Application
@@ -22,8 +20,6 @@ namespace DateTimeService.Application
                 .AddHttpClients()
                 .AddRedis(configuration)
                 .ConfigureHangfire();
-
-            AppSettings.Initialize(configuration);
 
             return services;
         }
@@ -62,8 +58,6 @@ namespace DateTimeService.Application
 
         private static IServiceCollection AddHttpClients(this IServiceCollection services)
         {
-            services.AddHttpClient<ILogger, HttpLogger>();
-
             services.AddHttpClient<DatabaseCheckService>("elastic").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator

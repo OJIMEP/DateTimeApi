@@ -513,7 +513,6 @@ namespace DateTimeService.Application.Database.DatabaseManagement
         {
             var logElement = new ElasticLogElement
             {
-                LoadBalancingExecution = 0,
                 ErrorDescription = description,
                 Status = status,
                 DatabaseConnection = connectionName
