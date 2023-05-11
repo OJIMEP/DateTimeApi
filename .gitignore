@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /DateTime.Api/appsettings.json
 /DateTime.Api/appsettings.Development.json
+/.editorconfig
