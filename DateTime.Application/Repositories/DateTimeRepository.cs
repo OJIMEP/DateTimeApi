@@ -344,13 +344,11 @@ namespace DateTimeService.Application.Repositories
                 queryParameters.Add("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             }
 
-            string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
-                ? DateMove.ToString("yyyy-MM-ddTHH:00:00")
-            : DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
+            string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
             var pickupWorkingHoursJoinType = _configuration.GetValue<string>("pickupWorkingHoursJoinType");
 
-            string useIndexHint = _configuration.GetValue<string>("useIndexHintWarehouseDates");// @", INDEX([_InfoRg23830_Custom2])";
+            string useIndexHint = _configuration.GetValue<string>("UseIndexHintWarehouseDates");// @", INDEX([_InfoRg23830_Custom2])";
             if (dbConnection.DatabaseType != DatabaseType.ReplicaTables || dbConnection.UseAggregations)
             {
                 useIndexHint = "";
@@ -365,7 +363,7 @@ namespace DateTimeService.Application.Repositories
                 pickupWorkingHoursJoinType,
                 useIndexHint);
 
-            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
+            if (_configuration.GetValue<bool>("DisableKeepFixedPlan"))
             {
                 queryText = queryText.Replace(", KEEPFIXED PLAN", "");
             }
@@ -408,9 +406,7 @@ namespace DateTimeService.Application.Repositories
             queryParameters.Add("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             queryParameters.Add("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
 
-            string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
-                ? DateMove.ToString("yyyy-MM-ddTHH:00:00")
-                : DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
+            string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
             queryText = queryTextBegin + string.Format(queryText,
                 "",
@@ -419,9 +415,9 @@ namespace DateTimeService.Application.Repositories
                 DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
                 globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
-                dbConnection.DatabaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("useIndexHintWarehouseDates") : ""); // index hint
+                dbConnection.DatabaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("UseIndexHintWarehouseDates") : ""); // index hint
 
-            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
+            if (_configuration.GetValue<bool>("DisableKeepFixedPlan"))
             {
                 queryText = queryText.Replace(", KEEPFIXED PLAN", "");
             }
@@ -462,9 +458,7 @@ namespace DateTimeService.Application.Repositories
                     return parameterName;
                 }));
 
-            string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
-                ? DateMove.ToString("yyyy-MM-ddTHH:00:00")
-                : DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
+            string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
             queryText = queryTextBegin + string.Format(queryText,
                 dateTimeNowOptimizeString,
@@ -472,10 +466,10 @@ namespace DateTimeService.Application.Repositories
                 DateMove.Date.AddDays(7 - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
                 globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
-                databaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("useIndexHintWarehouseDates") : "", // index hint
+                databaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("UseIndexHintWarehouseDates") : "", // index hint
                 pickupPointsString);
 
-            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
+            if (_configuration.GetValue<bool>("DisableKeepFixedPlan"))
             {
                 queryText = queryText.Replace(", KEEPFIXED PLAN", "");
             }
@@ -665,47 +659,7 @@ namespace DateTimeService.Application.Repositories
 
             if (parameters is null)
             {
-                parameters = new List<GlobalParameter>
-                {
-                    new GlobalParameter
-                    {
-                        Name = "rsp_КоличествоДнейЗаполненияГрафика",
-                        DefaultDouble = 5
-                    },
-                    new GlobalParameter
-                    {
-                        Name = "КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа",
-                        DefaultDouble = 4
-                    },
-                    new GlobalParameter
-                    {
-                        Name = "ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа",
-                        DefaultDouble = 3
-                    },
-                    new GlobalParameter
-                    {
-                        Name = "Логистика_ЭтажПоУмолчанию",
-                        DefaultDouble = 4,
-                        UseDefault = true
-                    },
-                    new GlobalParameter
-                    {
-                        Name = "ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров",
-                        DefaultDouble = 0
-                    },
-                    new GlobalParameter
-                    {
-                        Name = "КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров",
-                        DefaultDouble = 0
-                    },
-                    new GlobalParameter
-                    {
-                        Name = "ПриоритизироватьСток_64854",
-                        DefaultDouble = 0
-                    }
-                };
-
-                await GlobalParameter.FillValues(connection, parameters, token);
+                parameters = await GlobalParameter.GetParameters(connection, token);
 
                 if (_redisSettings.Enabled
                     && _redis.IsConnected)

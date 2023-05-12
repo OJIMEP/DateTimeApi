@@ -1,4 +1,5 @@
-﻿using DateTimeService.Application.Models;
+﻿using DateTimeService.Application.Database.DatabaseManagement;
+using DateTimeService.Application.Models;
 using DateTimeService.Contracts.Requests;
 using DateTimeService.Contracts.Responses;
 
@@ -115,6 +116,24 @@ namespace DateTimeService.Api.Mapping
             response.YourTime.IsAvailable = result.YourTime;
 
             return response;
+        }
+
+        public static DatabaseStatusListResponse MapToDatabaseStatusListResponse(this DatabaseInfo result)
+        {
+            return new DatabaseStatusListResponse
+            {
+                Priority = result.Priority,
+                Type = result.Type,
+                ConnectionWithoutCredentials = result.ConnectionWithoutCredentials,
+                AvailableToUse = result.AvailableToUse,
+                LastFreeProcCacheCommand = result.LastFreeProcCacheCommand,
+                LastCheckAvailability = result.LastCheckAvailability,
+                LastCheckAggregations = result.LastCheckAggregations,
+                LastCheckPerfomance = result.LastCheckPerfomance,
+                CustomAggregationsAvailable = result.CustomAggregationsAvailable,
+                CustomAggsFailCount = result.CustomAggsFailCount,
+                TimeCriteriaFailCount = result.TimeCriteriaFailCount
+            };
         }
 
         //123456 => 00-00123456

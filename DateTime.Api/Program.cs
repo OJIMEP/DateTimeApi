@@ -71,54 +71,59 @@ app.Use(async (context, next) =>
     await next();
 });
 
-try
-{
-    var reloadDatabasesService = app.Services.GetRequiredService<IReloadDatabasesService>();
-    RecurringJob.AddOrUpdate("ReloadDatabasesFromFiles", () => reloadDatabasesService.ReloadAsync(CancellationToken.None), "*/10 * * * * *"); //every 10 seconds
-
-    var checkStatusService = app.Services.GetRequiredService<IDatabaseAvailabilityControl>();
-    RecurringJob.AddOrUpdate("CheckAndUpdateDatabasesStatus", () => checkStatusService.CheckAndUpdateDatabasesStatus(CancellationToken.None), Cron.Minutely());
-}
-catch (Exception ex)
-{
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred while starting recurring job.");
-}
-
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILogger<Program>>();
-    try
-    {
-        //var db = services.GetRequiredService<DateTimeServiceContext>();
-        //db.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while migrating the database.");
-    }
-
-    try
-    {
-        var userManager = services.GetRequiredService<UserManager<DateTimeServiceUser>>();
-        var rolesManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        await RoleInitializer.InitializeAsync(userManager, rolesManager, configuration);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while seeding the database.");
-    }
-
-    try
-    {
-        //var db = services.GetRequiredService<DateTimeServiceContext>();
-        //await RoleInitializer.CleanTokensAsync(db);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while clearing the database.");
-    }
-}
+await OnAppStarting();
 
 app.Run();
+
+async Task OnAppStarting()
+{
+    try
+    {
+        var reloadDatabasesService = app.Services.GetRequiredService<IReloadDatabasesService>();
+        RecurringJob.AddOrUpdate("ReloadDatabasesFromFiles", () => reloadDatabasesService.ReloadAsync(CancellationToken.None), "*/10 * * * * *"); //every 10 seconds
+
+        var checkStatusService = app.Services.GetRequiredService<IDatabaseAvailabilityControl>();
+        RecurringJob.AddOrUpdate("CheckAndUpdateDatabasesStatus", () => checkStatusService.CheckAndUpdateDatabasesStatus(CancellationToken.None), Cron.Minutely());
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while starting recurring job.");
+    }
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        try
+        {
+            //var db = services.GetRequiredService<DateTimeServiceContext>();
+            //db.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while migrating the database.");
+        }
+
+        try
+        {
+            var userManager = services.GetRequiredService<UserManager<DateTimeServiceUser>>();
+            var rolesManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+            await RoleInitializer.InitializeAsync(userManager, rolesManager, configuration);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while seeding the database.");
+        }
+
+        try
+        {
+            //var db = services.GetRequiredService<DateTimeServiceContext>();
+            //await RoleInitializer.CleanTokensAsync(db);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while clearing the database.");
+        }
+    }
+}

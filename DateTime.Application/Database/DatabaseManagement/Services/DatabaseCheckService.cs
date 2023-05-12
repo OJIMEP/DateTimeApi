@@ -12,6 +12,7 @@ using DateTimeService.Application.Logging;
 using DateTimeService.Api;
 using DateTimeService.Application.Queries;
 using DateTimeService.Application.Models;
+using DateTimeService.Application.Repositories;
 
 namespace DateTimeService.Application.Database.DatabaseManagement
 {
@@ -204,15 +205,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
                 cmd.CommandTimeout = (int)(executionLimit / 1000);
 
-                var dateTimeNowOptimizeString = "";
-                if (_configuration.GetValue<bool>("optimizeDateTimeNowEveryHour"))
-                {
-                    dateTimeNowOptimizeString = DateMove.ToString("yyyy-MM-ddTHH:00:00");
-                }
-                else
-                {
-                    dateTimeNowOptimizeString = dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
-                }
+                string dateTimeNowOptimizeString = dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
                 var pickupWorkingHoursJoinType = _configuration.GetValue<string>("pickupWorkingHoursJoinType");
 
@@ -432,7 +425,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             {
                 if (_productionEnv)
                 {
-                    _logger.LogElastic($"Database with key {connectionWithOutCredentials} has no logs in Elastic!");
+                    //_logger.LogElastic($"Database with key {connectionWithOutCredentials} has no logs in Elastic!");
                 }
                 return null;
             }

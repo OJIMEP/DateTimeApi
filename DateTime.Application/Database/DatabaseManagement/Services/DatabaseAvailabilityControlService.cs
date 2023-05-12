@@ -55,7 +55,6 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
                 if (databaseInfo.AvailableToUse)
                 {
-                    string connection = databaseInfo.Connection;
                     int customAggsFailCount = databaseInfo.CustomAggsFailCount;
                     int timeCriteriaFailCount = databaseInfo.TimeCriteriaFailCount;
 
@@ -84,11 +83,6 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
         private async Task CheckAndUpdatePerfomance(DatabaseInfo databaseInfo, DateTimeOffset lastFreeProcCacheCommand, int timeCriteriaFailCount, bool clearCacheAllowed, CancellationToken token)
         {
-            if (!_configuration.GetValue<bool>("UseLoadBalance2"))
-            {
-                return;
-            }
-
             var stats = await _databaseCheckService.GetElasticLogsInformationAsync(databaseInfo.ConnectionWithoutCredentials, token);
             if (stats != null)
             {
@@ -122,7 +116,13 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
             else
             {
-                _logger.LogElastic("Check and update perfomance - no elastic logs");
+                var logElement = new ElasticLogElement
+                {
+                    Status = LogStatus.Info,
+                    ErrorDescription = "Check and update perfomance - no elastic logs",
+                    DatabaseConnection = databaseInfo.Connection
+                };
+                _logger.LogElastic(logElement);
             }
         }
 

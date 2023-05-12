@@ -185,7 +185,7 @@ namespace DateTimeService.Application.Repositories
             }
             else
             {
-                alwaysCheckGeozone = _configuration.GetValue<bool>("alwaysCheckGeozone");
+                alwaysCheckGeozone = _configuration.GetValue<bool>("AlwaysCheckGeozone");
                 if (!alwaysCheckGeozone)
                 {
                     addressExists = await AdressExists(connection, query.AddressId, token);

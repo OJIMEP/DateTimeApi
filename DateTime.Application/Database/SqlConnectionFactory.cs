@@ -1,5 +1,9 @@
-﻿using DateTimeService.Application.Database.DatabaseManagement;
+﻿using DateTimeService.Api;
+using DateTimeService.Application.Database.DatabaseManagement;
+using DateTimeService.Application.Logging;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace DateTimeService.Application.Database
@@ -12,10 +16,18 @@ namespace DateTimeService.Application.Database
     public class SqlConnectionFactory : IDbConnectionFactory
     {
         private readonly IReadableDatabase _databaseService;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<SqlConnectionFactory> _logger;
 
-        public SqlConnectionFactory(IReadableDatabase databaseService)
+        private readonly bool _checkConnection;
+
+        public SqlConnectionFactory(IReadableDatabase databaseService, IConfiguration configuration, ILogger<SqlConnectionFactory> logger)
         {
             _databaseService = databaseService;
+            _configuration = configuration;
+
+            _checkConnection = !_configuration.GetValue<bool>("DisableConnectionCheck");
+            _logger = logger;
         }
 
         public async Task<DbConnection> CreateConnectionAsync(CancellationToken token = default)
@@ -59,8 +71,15 @@ namespace DateTimeService.Application.Database
                             result.ConnectionWithoutCredentials = connParameter.ConnectionWithoutCredentials;
                             break;
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
+                            var logElement = new ElasticLogElement
+                            {
+                                Status = LogStatus.Error,
+                                ErrorDescription = ex.Message,
+                                DatabaseConnection = connParameter.ConnectionWithoutCredentials
+                            };
+                            _logger.LogElastic(logElement);
                             failedConnections.Add(connParameter.Connection);
                         }
                     }
@@ -77,26 +96,41 @@ namespace DateTimeService.Application.Database
             return result;
         }
 
-        private static async Task<SqlConnection> GetConnectionByDatabaseInfo(DatabaseInfo databaseInfo, CancellationToken token = default)
+        private async Task<SqlConnection> GetConnectionByDatabaseInfo(DatabaseInfo databaseInfo, CancellationToken token = default)
         {
-            var queryStringCheck = databaseInfo.DatabaseType switch
+            var builder = new SqlConnectionStringBuilder(databaseInfo.Connection)
             {
-                DatabaseType.Main => DbCheckQueries.Main,
-                DatabaseType.ReplicaFull => DbCheckQueries.ReplicaFull,
-                DatabaseType.ReplicaTables => DbCheckQueries.ReplicaTables,
-                _ => ""
+                Pooling = true,
+                MaxPoolSize = 100,
+                MinPoolSize = 10,
+                ConnectTimeout = 5
             };
 
-            SqlConnection connection = new(databaseInfo.Connection);
+            string newConnectionString = builder.ConnectionString;
+
+            SqlConnection connection = new(newConnectionString);
+            //SqlConnection connection = new(databaseInfo.Connection);
+
             await connection.OpenAsync(token);
 
-            SqlCommand cmd = new(queryStringCheck, connection)
-            {
-                CommandTimeout = 1
-            };
+            if (_checkConnection) {
 
-            _ = await cmd.ExecuteScalarAsync(token);
+                var queryStringCheck = databaseInfo.DatabaseType switch
+                {
+                    DatabaseType.Main => DbCheckQueries.Main,
+                    DatabaseType.ReplicaFull => DbCheckQueries.ReplicaFull,
+                    DatabaseType.ReplicaTables => DbCheckQueries.ReplicaTables,
+                    _ => ""
+                };
 
+                SqlCommand cmd = new(queryStringCheck, connection)
+                {
+                    CommandTimeout = 1
+                };
+
+                _ = await cmd.ExecuteScalarAsync(token);
+            }
+            
             return connection;
         }
     }
