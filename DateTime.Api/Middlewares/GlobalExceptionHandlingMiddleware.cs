@@ -24,7 +24,7 @@ namespace DateTimeService.Api.Middlewares
                 var logElement = new ElasticLogElement()
                 {
                     Status = LogStatus.Error,
-                    ErrorDescription = ex.Message
+                    ErrorDescription = ex.Message + ex.StackTrace
                 };
 
                 logElement.FillFromHttpContext(context);

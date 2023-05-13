@@ -6,8 +6,8 @@
 
         public required string Code { get; init; }
 
-        public DateTime Courier { get; init; }
+        public DateTime Courier { get; set; }
 
-        public DateTime Self { get; init; }
+        public DateTime Self { get; set; }
     }
 }

@@ -25,9 +25,9 @@ namespace DateTimeService.Application.Database
         {
             _databaseService = databaseService;
             _configuration = configuration;
-
-            _checkConnection = !_configuration.GetValue<bool>("DisableConnectionCheck");
             _logger = logger;
+
+            _checkConnection = !_configuration.GetValue<bool>("DisableConnectionCheck");       
         }
 
         public async Task<DbConnection> CreateConnectionAsync(CancellationToken token = default)
@@ -38,7 +38,7 @@ namespace DateTimeService.Application.Database
 
             var connectionParameters = _databaseService.GetAllDatabases();
 
-            var timeMS = System.DateTime.Now.Millisecond % 100;
+            var timeMS = DateTime.Now.Millisecond % 100;
 
             List<string> failedConnections = new();
 
@@ -98,18 +98,22 @@ namespace DateTimeService.Application.Database
 
         private async Task<SqlConnection> GetConnectionByDatabaseInfo(DatabaseInfo databaseInfo, CancellationToken token = default)
         {
-            var builder = new SqlConnectionStringBuilder(databaseInfo.Connection)
+            string connectionString = databaseInfo.Connection;
+
+            if (_configuration.GetValue<bool>("UseConnectionPool"))
             {
-                Pooling = true,
-                MaxPoolSize = 100,
-                MinPoolSize = 10,
-                ConnectTimeout = 5
-            };
+                var builder = new SqlConnectionStringBuilder(databaseInfo.Connection)
+                {
+                    Pooling = true,
+                    MaxPoolSize = _configuration.GetValue<int>("MaxConnectionPoolSize"),
+                    MinPoolSize = 10,
+                    ConnectTimeout = 5
+                };
 
-            string newConnectionString = builder.ConnectionString;
+                connectionString = builder.ConnectionString;
+            }
 
-            SqlConnection connection = new(newConnectionString);
-            //SqlConnection connection = new(databaseInfo.Connection);
+            SqlConnection connection = new(connectionString);
 
             await connection.OpenAsync(token);
 

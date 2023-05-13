@@ -5,6 +5,7 @@ using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using System.ComponentModel.DataAnnotations;
@@ -21,9 +22,10 @@ namespace DateTimeService.Application.Repositories
         private readonly RedisSettings _redisSettings;
         private readonly IConnectionMultiplexer _redis;
         private readonly IHttpContextAccessor _contextAccessor;
+        private readonly IMemoryCache _memoryCache;
 
         public DateTimeRepository(IDbConnectionFactory dbConnectionFactory, RedisSettings redisSettings, IConnectionMultiplexer redis,
-            IConfiguration configuration, IGeoZones geoZones, IHttpContextAccessor contextAccessor)
+            IConfiguration configuration, IGeoZones geoZones, IHttpContextAccessor contextAccessor, IMemoryCache memoryCache)
         {
             _dbConnectionFactory = dbConnectionFactory;
             _redisSettings = redisSettings;
@@ -31,6 +33,7 @@ namespace DateTimeService.Application.Repositories
             _configuration = configuration;
             _geoZones = geoZones;
             _contextAccessor = contextAccessor;
+            _memoryCache = memoryCache;
         }
 
         public async Task<AvailableDateResult> GetAvailableDateAsync(AvailableDateQuery query, CancellationToken token = default)
@@ -123,8 +126,11 @@ namespace DateTimeService.Application.Repositories
                 if (deliveryType == Constants.YourTimeDelivery) { result.YourTime = taskResult.available; }
             }
 
-            _contextAccessor.HttpContext.Items["TimeDatabaseConnection"] = Convert.ToInt64(results.Max(obj => obj.sqlConnectionTime));
-            _contextAccessor.HttpContext.Items["TimeSqlExecution"] = Convert.ToInt64(results.Max(obj => obj.sqlExecutionTime));
+            lock (_contextAccessor.HttpContext.Items)
+            {
+                _contextAccessor.HttpContext.Items["TimeDatabaseConnection"] = Convert.ToInt64(results.Max(obj => obj.sqlConnectionTime));
+                _contextAccessor.HttpContext.Items["TimeSqlExecution"] = Convert.ToInt64(results.Max(obj => obj.sqlExecutionTime));
+            }
 
             return result;
         }
@@ -133,27 +139,30 @@ namespace DateTimeService.Application.Repositories
         {
             DbConnection dbConnection = await GetDbConnection(token: token);
 
-            SqlConnection connection = dbConnection.Connection;
+            IEnumerable<AvailableDateRecord> dbResult;
 
-            var globalParameters = await GetGlobalParameters(connection, token);
+            using (var connection = dbConnection.Connection)
+            {
+                var globalParameters = await GetGlobalParameters(connection, token);
 
-            var queryParameters = new DynamicParameters();
+                var queryParameters = new DynamicParameters();
 
-            string queryText = AvailableDateQueryText(query, globalParameters, queryParameters, dbConnection);
+                string queryText = AvailableDateQueryText(query, globalParameters, queryParameters, dbConnection);
 
-            Stopwatch watch = Stopwatch.StartNew();
+                Stopwatch watch = Stopwatch.StartNew();
 
-            var dbResult = await connection.QueryAsync<AvailableDateRecord>(
-                new CommandDefinition(queryText, queryParameters, cancellationToken: token)
-            );
+                dbResult = await connection.QueryAsync<AvailableDateRecord>(
+                    new CommandDefinition(queryText, queryParameters, cancellationToken: token)
+                );
 
-            watch.Stop();
-            _contextAccessor.HttpContext.Items["TimeSqlExecution"] = watch.ElapsedMilliseconds;
+                watch.Stop();
+                _contextAccessor.HttpContext.Items["TimeSqlExecution"] = watch.ElapsedMilliseconds;
+            }
 
             foreach (var record in dbResult)
             {
-                record.Courier.AddYears(-2000);
-                record.Self.AddYears(-2000);
+                record.Courier = record.Courier.AddYears(-2000);
+                record.Self = record.Self.AddYears(-2000);
             };
 
             var resultDict = new AvailableDateResult();
@@ -217,17 +226,17 @@ namespace DateTimeService.Application.Repositories
         {
             var result = new IntervalListResult();
 
-            var globalParameters = await GetGlobalParameters(dbConnection.Connection, token);
-
-            var queryParameters = new DynamicParameters();
-
-            string queryText = IntervalListQueryText(query, globalParameters, queryParameters, dbConnection, zoneId);
-
-            Stopwatch watch = Stopwatch.StartNew();
-
-            try
+            using (var connection = dbConnection.Connection)
             {
-                var results = await dbConnection.Connection.QueryAsync<IntervalListRecord>(
+                var globalParameters = await GetGlobalParameters(connection, token);
+
+                var queryParameters = new DynamicParameters();
+
+                string queryText = IntervalListQueryText(query, globalParameters, queryParameters, dbConnection, zoneId);
+
+                Stopwatch watch = Stopwatch.StartNew();
+
+                var results = await connection.QueryAsync<IntervalListRecord>(
                     new CommandDefinition(queryText, queryParameters, cancellationToken: token)
                 );
 
@@ -244,51 +253,47 @@ namespace DateTimeService.Application.Repositories
                         Bonus = bonus
                     });
                 }
-            }
-            catch (Exception)
-            {
-                throw;
-            }
 
-            watch.Stop();
-            _contextAccessor.HttpContext.Items["TimeSqlExecution"] = watch.ElapsedMilliseconds;
+                watch.Stop();
+
+                _contextAccessor.HttpContext.Items["TimeSqlExecution"] = watch.ElapsedMilliseconds;
+            }
 
             return result;
         }
 
         private async Task<DeliveryTypeAvailabilityResult>? GetDeliveryTypeAvailabilityFromDatabase(AvailableDeliveryTypesQuery query, string deliveryType, CancellationToken token)
         {
+            bool deliveryTypeAvailable;
+            long elapsedMs;
+
             DbConnection dbConnection = await GetDbConnection(token);
 
-            var globalParameters = await GetGlobalParameters(dbConnection.Connection, token);
-
-            var queryParameters = new DynamicParameters();
-
-            string queryText = AvailableDeliveryTypesQueryText(query, globalParameters, queryParameters, deliveryType, dbConnection.DatabaseType);
-
-            bool deliveryTypeAvailable;
-
-            var watch = Stopwatch.StartNew();
-
-            try
+            using (var connection = dbConnection.Connection)
             {
+                var globalParameters = await GetGlobalParameters(dbConnection.Connection, token);
+
+                var queryParameters = new DynamicParameters();
+
+                string queryText = AvailableDeliveryTypesQueryText(query, globalParameters, queryParameters, deliveryType, dbConnection.DatabaseType);
+
+                var watch = Stopwatch.StartNew();
+
                 var result = await dbConnection.Connection.QueryAsync<int>(
                     new CommandDefinition(queryText, queryParameters, cancellationToken: token));
 
+                watch.Stop();
+
+                elapsedMs = watch.ElapsedMilliseconds;
+
                 deliveryTypeAvailable = result != null && result.Any();
             }
-            catch (Exception)
-            {
-                throw;
-            }
-
-            watch.Stop();
 
             return new DeliveryTypeAvailabilityResult
             {
                 deliveryType = deliveryType,
                 available = deliveryTypeAvailable,
-                sqlExecutionTime = watch.ElapsedMilliseconds,
+                sqlExecutionTime = elapsedMs,
                 sqlConnectionTime = dbConnection.ConnectTimeInMilliseconds
             };
         }
@@ -625,8 +630,11 @@ namespace DateTimeService.Application.Repositories
             {
                 dbConnection = await _dbConnectionFactory.CreateConnectionAsync(token);
                 
-                _contextAccessor.HttpContext.Items["DatabaseConnection"] = dbConnection.ConnectionWithoutCredentials;
-                _contextAccessor.HttpContext.Items["TimeDatabaseConnection"] = dbConnection.ConnectTimeInMilliseconds;
+                lock (_contextAccessor.HttpContext.Items)
+                {
+                    _contextAccessor.HttpContext.Items["DatabaseConnection"] = dbConnection.ConnectionWithoutCredentials;
+                    _contextAccessor.HttpContext.Items["TimeDatabaseConnection"] = dbConnection.ConnectTimeInMilliseconds;
+                }            
             }
             catch (Exception ex)
             {
@@ -645,34 +653,42 @@ namespace DateTimeService.Application.Repositories
         {
             var watch = Stopwatch.StartNew();
 
-            List<GlobalParameter> parameters = null;
-
             string key = "GlobalParameters";
 
-            if (_redisSettings.Enabled
-                && _redis.IsConnected)
+            var parameters = await _memoryCache.GetOrCreateAsync(key, async entry =>
             {
-                var db = _redis.GetDatabase((int)_redisSettings.Database);
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
+                return await GlobalParameter.GetParameters(connection, token);
+            });
 
-                parameters = await db.GetRecord<List<GlobalParameter>>(key);
-            }
+            //if (_redisSettings.Enabled
+            //    && _redis.IsConnected)
+            //{
+            //    var db = _redis.GetDatabase((int)_redisSettings.Database);
 
-            if (parameters is null)
-            {
-                parameters = await GlobalParameter.GetParameters(connection, token);
+            //    parameters = await db.GetRecord<List<GlobalParameter>>(key);
+            //}
 
-                if (_redisSettings.Enabled
-                    && _redis.IsConnected)
-                {
-                    var db = _redis.GetDatabase((int)_redisSettings.Database);
+            //if (parameters is null)
+            //{
+            //    parameters = await GlobalParameter.GetParameters(connection, token);
 
-                    // кешируем ГП в памяти на 1 час, потом они снова обновятся
-                    await db.SetRecord(key, parameters, TimeSpan.FromSeconds(600));
-                }
-            }
+            //    if (_redisSettings.Enabled
+            //        && _redis.IsConnected)
+            //    {
+            //        var db = _redis.GetDatabase((int)_redisSettings.Database);
+
+            //        // кешируем ГП в памяти на 1 час, потом они снова обновятся
+            //        await db.SetRecord(key, parameters, TimeSpan.FromSeconds(600));
+            //    }
+            //}
 
             watch.Stop();
-            _contextAccessor.HttpContext.Items["TimeGlobalParametersExecution"] = watch.ElapsedMilliseconds;
+
+            lock (_contextAccessor.HttpContext.Items)
+            { 
+                _contextAccessor.HttpContext.Items["TimeGlobalParametersExecution"] = watch.ElapsedMilliseconds;
+            }
 
             return parameters;
         }
