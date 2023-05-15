@@ -130,22 +130,7 @@ namespace DateTimeService.Application.Database
 
         private async Task<SqlConnection> GetConnectionByDatabaseInfo(DatabaseInfo databaseInfo, CancellationToken token = default)
         {
-            string connectionString = databaseInfo.Connection;
-
-            if (_configuration.GetValue<bool>("UseConnectionPool"))
-            {
-                var builder = new SqlConnectionStringBuilder(databaseInfo.Connection)
-                {
-                    Pooling = true,
-                    MaxPoolSize = _configuration.GetValue<int>("MaxConnectionPoolSize"),
-                    MinPoolSize = 10,
-                    ConnectTimeout = 5
-                };
-
-                connectionString = builder.ConnectionString;
-            }
-
-            SqlConnection connection = new(connectionString);
+            SqlConnection connection = new(databaseInfo.Connection);
 
             await connection.OpenAsync(token);
 

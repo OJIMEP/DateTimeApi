@@ -52,17 +52,16 @@ From
 	#Temp_GoodsRaw T1
 	Inner Join 	dbo._Reference149 Номенклатура With (NOLOCK) 
 		ON T1.code is NULL 
-		and T1.PickupPoint is null
-		and T1.Article = Номенклатура._Fld3480
+		And T1.PickupPoint is null
+		And T1.Article = Номенклатура._Fld3480
 	Inner Join dbo._Reference256 Упаковки With (NOLOCK)
 		On 
 		Упаковки._OwnerID_TYPE = 0x08  
-		AND Упаковки.[_OwnerID_RTRef] = 0x00000095
-		AND 
-		Номенклатура._IDRRef = Упаковки._OwnerID_RRRef		
+		And Упаковки.[_OwnerID_RTRef] = 0x00000095
+		And Номенклатура._IDRRef = Упаковки._OwnerID_RRRef		
 		And Упаковки._Fld6003RRef = Номенклатура._Fld3489RRef
-		AND Упаковки._Marked = 0x00
-union all
+		And Упаковки._Marked = 0x00
+Union all
 Select 
 	Номенклатура._IDRRef,
 	Номенклатура._Code,
@@ -78,16 +77,15 @@ From
 	#Temp_GoodsRaw T1
 	Inner Join 	dbo._Reference149 Номенклатура With (NOLOCK) 
 		ON T1.code is not NULL 
-		and T1.PickupPoint is null
-		and T1.code = Номенклатура._Code
+		And T1.PickupPoint is null
+		And T1.code = Номенклатура._Code
 	Inner Join dbo._Reference256 Упаковки With (NOLOCK)
 		On 
 		Упаковки._OwnerID_TYPE = 0x08  
-		AND Упаковки.[_OwnerID_RTRef] = 0x00000095
-		AND 
-		Номенклатура._IDRRef = Упаковки._OwnerID_RRRef		
+		And Упаковки.[_OwnerID_RTRef] = 0x00000095
+		And Номенклатура._IDRRef = Упаковки._OwnerID_RRRef		
 		And Упаковки._Fld6003RRef = Номенклатура._Fld3489RRef
-		AND Упаковки._Marked = 0x00
+		And Упаковки._Marked = 0x00
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 WITH cte AS (
@@ -103,9 +101,9 @@ SELECT t1.Article, t1.code, cte.PickupPoint
 INTO #Temp_GoodsRawParsed
 FROM #Temp_GoodsRaw t1
 Left JOIN cte
- ON t1.PickupPoint is not null;
+    ON t1.PickupPoint is not null;
 
- Select 
+Select 
 	Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
 	Номенклатура.code AS code,
 	Номенклатура.article AS article,
@@ -125,7 +123,7 @@ From
 		ON T1.code is NULL and T1.Article = Номенклатура.article
 	Left Join #Temp_PickupPoints  
 		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
-union all
+Union all
 Select 
 	Номенклатура.НоменклатураСсылка,
 	Номенклатура.code,

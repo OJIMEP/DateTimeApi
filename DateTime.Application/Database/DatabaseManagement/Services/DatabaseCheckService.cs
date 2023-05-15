@@ -124,12 +124,6 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
                 var queryTextBegin = TextFillGoodsTable(data, cmd, true, pickups);
 
-                if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
-                {
-                    query = query.Replace(", KEEPFIXED PLAN", "");
-                    queryTextBegin = queryTextBegin.Replace(", KEEPFIXED PLAN", "");
-                }
-
                 //define the SqlCommand object
                 List<string> pickupParameters = new();
                 foreach (var pickupPoint in pickups)

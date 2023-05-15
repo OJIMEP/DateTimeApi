@@ -73,6 +73,12 @@ app.Use(async (context, next) =>
 
 await OnAppStarting();
 
+if (app.Environment.IsDevelopment())
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogElastic("Starting development");
+}
+
 app.Run();
 
 async Task OnAppStarting()

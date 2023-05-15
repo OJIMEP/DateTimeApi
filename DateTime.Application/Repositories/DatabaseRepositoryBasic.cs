@@ -1,6 +1,7 @@
 ﻿using DateTimeService.Application.Database;
 using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
+using Hangfire.MemoryStorage.Database;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Memory;
@@ -29,23 +30,33 @@ namespace DateTimeService.Application.Repositories
             _geoZones = geoZones;
         }
 
-        public async Task<AvailableDateResult> GetAvailableDate(AvailableDateQuery query, CancellationToken token = default)
+        public async Task<AvailableDateResult> GetAvailableDates(AvailableDateQuery query, CancellationToken token = default)
         {
+            var resultDict = new AvailableDateResult
+            {
+                WithQuantity = query.CheckQuantity
+            };
+
+            if (query.Codes.Count == 0)
+            {
+                return resultDict;
+            }
+
             DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token: token);
 
             List<AvailableDateRecord> dbResult = new();
 
             using (var connection = dbConnection.Connection)
             {
-                SqlCommand command = await AvailableDateCommand(connection, query, dbConnection.DatabaseType, dbConnection.UseAggregations);
+                SqlCommand command = await AvailableDateCommand(connection, query, dbConnection);
 
                 Stopwatch watch = Stopwatch.StartNew();
 
                 SqlDataReader dr = await command.ExecuteReaderAsync(token);
-
+                
                 if (dr.HasRows)
                 {
-                    while (dr.Read())
+                    while (await dr.ReadAsync(token))
                     {
                         var record = new AvailableDateRecord
                         {
@@ -59,13 +70,14 @@ namespace DateTimeService.Application.Repositories
                     }
                 }
 
-                await dr.CloseAsync();
-
+                _ = dr.CloseAsync();
+                
                 watch.Stop();
-                _contextAccessor.HttpContext.Items["TimeSqlExecution"] = watch.ElapsedMilliseconds;
+                lock (_contextAccessor.HttpContext.Items)
+                {
+                    _contextAccessor.HttpContext.Items["TimeSqlExecution"] = watch.ElapsedMilliseconds;
+                }              
             }
-
-            var resultDict = new AvailableDateResult();
 
             try
             {
@@ -168,7 +180,7 @@ namespace DateTimeService.Application.Repositories
                     }
                 }
 
-                await dr.CloseAsync();
+                _ = dr.CloseAsync();
 
                 watch.Stop();
 
@@ -209,7 +221,7 @@ namespace DateTimeService.Application.Repositories
             };
         }
       
-        private async Task<SqlCommand> AvailableDateCommand(SqlConnection connection, AvailableDateQuery query, DatabaseType databaseType, bool customAggs)
+        private async Task<SqlCommand> AvailableDateCommand(SqlConnection connection, AvailableDateQuery query, DbConnection dbConnection)
         {
             var parameters1C = await GetGlobalParameters(connection);
 
@@ -224,20 +236,16 @@ namespace DateTimeService.Application.Repositories
 
             var queryTextBegin = TextFillGoodsTable(query, cmd, true, pickups);
 
-            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
-            {
-                queryTextBegin = queryTextBegin.Replace(", KEEPFIXED PLAN", "");
-            }
             List<string> queryParts = new()
             {
                 query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount1 : AvailableDateQueries.AvailableDate1,
-                customAggs == true ? AvailableDateQueries.AvailableDate2MinimumWarehousesCustom : AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
+                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate2MinimumWarehousesCustom : AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
                 query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount3 : AvailableDateQueries.AvailableDate3,
                 AvailableDateQueries.AvailableDate4SourcesWithPrices,
                 query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount5 : AvailableDateQueries.AvailableDate5,
-                customAggs == true ? AvailableDateQueries.AvailableDate6IntervalsCustom : AvailableDateQueries.AvailableDate6IntervalsBasic,
+                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate6IntervalsCustom : AvailableDateQueries.AvailableDate6IntervalsBasic,
                 AvailableDateQueries.AvailableDate7,
-                customAggs == true ? AvailableDateQueries.AvailableDate8DeliveryPowerCustom : AvailableDateQueries.AvailableDate8DeliveryPowerBasic,
+                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate8DeliveryPowerCustom : AvailableDateQueries.AvailableDate8DeliveryPowerBasic,
                 AvailableDateQueries.AvailableDate9
             };
 
@@ -248,8 +256,7 @@ namespace DateTimeService.Application.Repositories
             {
                 var parameterString = string.Format("@PickupPointAll{0}", pickups.IndexOf(pickupPoint));
                 pickupParameters.Add(parameterString);
-                cmd.Parameters.Add(parameterString, SqlDbType.NVarChar, 4);
-                cmd.Parameters[parameterString].Value = pickupPoint;
+                cmd.Parameters.AddWithValue(parameterString, pickupPoint);
             }
             if (pickupParameters.Count == 0)
             {
@@ -258,7 +265,7 @@ namespace DateTimeService.Application.Repositories
 
             var DateMove = DateTime.Now.AddYears(2000);
 
-            cmd.Parameters.AddWithValue("@P_CityCode", query.CityId);
+            //cmd.Parameters.AddWithValue("@P_CityCode", query.CityId);
             cmd.Parameters.AddWithValue("@P_DateTimeNow", DateMove);
             cmd.Parameters.AddWithValue("@P_DateTimePeriodBegin", DateMove.Date);
             cmd.Parameters.AddWithValue("@P_DateTimePeriodEnd", DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
@@ -269,24 +276,50 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_ApplyShifting", (int)parameters1C.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
             cmd.Parameters.AddWithValue("@P_DaysToShift", (int)parameters1C.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
 
+            cmd.Parameters.Add("@P_CityCode", SqlDbType.NVarChar, 10);
+            cmd.Parameters["@P_CityCode"].Value = query.CityId;
+
+            //cmd.Parameters.Add("@P_DateTimeNow", SqlDbType.DateTime);
+            //cmd.Parameters["@P_DateTimeNow"].Value = DateMove;
+
+            //cmd.Parameters.Add("@P_DateTimePeriodBegin", SqlDbType.DateTime);
+            //cmd.Parameters["@P_DateTimePeriodBegin"].Value = DateMove.Date;
+
+            //cmd.Parameters.Add("@P_DateTimePeriodEnd", SqlDbType.DateTime);
+            //cmd.Parameters["@P_DateTimePeriodEnd"].Value = DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1);
+
+            //cmd.Parameters.Add("@P_TimeNow", SqlDbType.DateTime);
+            //cmd.Parameters["@P_TimeNow"].Value = new DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second);
+
+            //cmd.Parameters.Add("@P_EmptyDate", SqlDbType.DateTime);
+            //cmd.Parameters["@P_EmptyDate"].Value = new DateTime(2001, 1, 1, 0, 0, 0);
+
+            //cmd.Parameters.Add("@P_MaxDate", SqlDbType.DateTime);
+            //cmd.Parameters["@P_MaxDate"].Value = new DateTime(5999, 11, 11, 0, 0, 0);
+
+            //cmd.Parameters.Add("@P_DaysToShow", SqlDbType.Int);
+            //cmd.Parameters["@P_DaysToShow"].Value = 7;
+
+            //cmd.Parameters.Add("@P_ApplyShifting", SqlDbType.Int);
+            //cmd.Parameters["@P_ApplyShifting"].Value = (int)parameters1C.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров");
+
+            //cmd.Parameters.Add("@P_DaysToShift", SqlDbType.Int);
+            //cmd.Parameters["@P_DaysToShift"].Value = (int)parameters1C.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров");
+
             if (query.CheckQuantity)
             {
                 cmd.Parameters.AddWithValue("@P_StockPriority", (int)parameters1C.GetValue("ПриоритизироватьСток_64854"));
+                //cmd.Parameters.Add("@P_StockPriority", SqlDbType.Int);
+                //cmd.Parameters["@P_StockPriority"].Value = (int)parameters1C.GetValue("ПриоритизироватьСток_64854");
             }
 
-            string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
-                ? DateMove.ToString("yyyy-MM-ddTHH:00:00")
-                : DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
+            string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
             var pickupWorkingHoursJoinType = _configuration.GetValue<string>("pickupWorkingHoursJoinType");
 
-            string useIndexHint = _configuration.GetValue<string>("useIndexHintWarehouseDates");// @", INDEX([_InfoRg23830_Custom2])";
-            if (databaseType != DatabaseType.ReplicaTables || customAggs)
-            {
-                useIndexHint = "";
-            }
+            string useIndexHint = string.Empty;
 
-            cmd.CommandText = queryTextBegin + string.Format(queryText, string.Join(",", pickupParameters),
+            queryText = queryTextBegin + string.Format(queryText, string.Join(",", pickupParameters),
                 dateTimeNowOptimizeString,
                 DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
                 DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
@@ -294,6 +327,8 @@ namespace DateTimeService.Application.Repositories
                 parameters1C.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 pickupWorkingHoursJoinType,
                 useIndexHint);
+
+            cmd.CommandText = queryText;
 
             return cmd;
         }
@@ -309,12 +344,6 @@ namespace DateTimeService.Application.Repositories
             };
 
             var queryTextBegin = TextFillGoodsTable(query, cmd);
-
-            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
-            {
-                queryText = queryText.Replace(", KEEPFIXED PLAN", "");
-                queryTextBegin = queryTextBegin.Replace(", KEEPFIXED PLAN", "");
-            }
 
             var yourTimeDelivery = false;
 
@@ -345,11 +374,9 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_StockPriority", (int)parameters1C.GetValue("ПриоритизироватьСток_64854"));
             cmd.Parameters.AddWithValue("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
 
-            string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
-                ? DateMove.ToString("yyyy-MM-ddTHH:00:00")
-                : DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
+            string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
-            cmd.CommandText = queryTextBegin + string.Format(queryText,
+            queryText = queryTextBegin + string.Format(queryText,
                 "",
                 dateTimeNowOptimizeString,
                 DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
@@ -357,6 +384,8 @@ namespace DateTimeService.Application.Repositories
                 parameters1C.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 parameters1C.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 databaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("useIndexHintWarehouseDates") : ""); // index hint
+
+            cmd.CommandText = queryText;
 
             return cmd;
         }
@@ -372,12 +401,6 @@ namespace DateTimeService.Application.Repositories
             };
 
             var queryTextBegin = TextFillGoodsTable(query, cmd);
-
-            if (_configuration.GetValue<bool>("disableKeepFixedPlan"))
-            {
-                queryText = queryText.Replace(", KEEPFIXED PLAN", "");
-                queryTextBegin = queryTextBegin.Replace(", KEEPFIXED PLAN", "");
-            }
 
             var DateMove = DateTime.Now.AddYears(2000);
 
@@ -405,11 +428,9 @@ namespace DateTimeService.Application.Repositories
                     return parameterName;
                 }));
 
-            string dateTimeNowOptimizeString = _configuration.GetValue<bool>("optimizeDateTimeNowEveryHour")
-                ? DateMove.ToString("yyyy-MM-ddTHH:00:00")
-                : DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
+            string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
-            cmd.CommandText = queryTextBegin + string.Format(queryText,
+            queryText = queryTextBegin + string.Format(queryText,
                 dateTimeNowOptimizeString,
                 DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
                 DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
@@ -417,6 +438,8 @@ namespace DateTimeService.Application.Repositories
                 parameters1C.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 databaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("useIndexHintWarehouseDates") : "", // index hint
                 pickupPointsString);
+
+            cmd.CommandText = queryText;
 
             return cmd;
         }
@@ -474,9 +497,20 @@ namespace DateTimeService.Application.Repositories
                 var code = $"@Code{index}";
                 var quantity = $"@Quantity{index}";
 
-                cmdGoodsTable.Parameters.AddWithValue(article, item.Article);
-                cmdGoodsTable.Parameters.AddWithValue(code, string.IsNullOrEmpty(item.Code) ? DBNull.Value : item.Code);
+                //cmdGoodsTable.Parameters.AddWithValue(article, item.Article);
+                //cmdGoodsTable.Parameters.AddWithValue(code, string.IsNullOrEmpty(item.Code) ? DBNull.Value : item.Code);
                 cmdGoodsTable.Parameters.AddWithValue(quantity, item.Quantity);
+                cmdGoodsTable.Parameters.Add(article, SqlDbType.NVarChar, 11);
+                cmdGoodsTable.Parameters[article].Value = item.Article;
+
+                cmdGoodsTable.Parameters.Add(code, SqlDbType.NVarChar, 11);
+                if (String.IsNullOrEmpty(item.Code))
+                    cmdGoodsTable.Parameters[code].Value = DBNull.Value;
+                else
+                    cmdGoodsTable.Parameters[code].Value = item.Code;
+
+                //cmdGoodsTable.Parameters.Add(quantity, SqlDbType.Int, 10);
+                //cmdGoodsTable.Parameters[quantity].Value = item.Quantity;
 
                 var parameterString = $"({article}, {code}, NULL, {quantity})";
 
@@ -489,11 +523,13 @@ namespace DateTimeService.Application.Repositories
                     parameters.Clear();
                 }
 
-                if (item.PickupPoints.Count() > 0)
+                if (item.PickupPoints.Any())
                 {
                     var pickupPoint = $"@PickupPoint{index}";
 
-                    cmdGoodsTable.Parameters.AddWithValue(pickupPoint, string.Join(",", item.PickupPoints));
+                    //cmdGoodsTable.Parameters.AddWithValue(pickupPoint, string.Join(",", item.PickupPoints.Take(3)));
+                    cmdGoodsTable.Parameters.Add(pickupPoint, SqlDbType.NVarChar, 45);
+                    cmdGoodsTable.Parameters[pickupPoint].Value = string.Join(",", item.PickupPoints.Take(10)); //читерство
 
                     var parameterStringPickup = $"({article}, {code}, {pickupPoint}, {quantity})";
                     parameters.Add(parameterStringPickup);

@@ -18,12 +18,13 @@ namespace DateTimeService.Application.Repositories
 
         public async Task<AvailableDateResult> GetAvailableDateAsync(AvailableDateQuery query, CancellationToken token = default)
         {
-            query.CheckQuantity = query.CheckQuantity && query.Codes.Any(x => x.Quantity > 1);
+            AvailableDateQuery.SplitByQuantity(query, out AvailableDateQuery queryWithQuantity, out AvailableDateQuery queryWithoutQuantity);
+
             AvailableDateResult result = new();
 
             _contextAccessor.HttpContext.Items["TotalItems"] = query.Codes.Count;
 
-            if (!query.CheckQuantity)
+            if (queryWithoutQuantity.Codes.Count > 0)
             {
                 var dataFromCache = await _redisRepository.GetAvailableDateResultGromCashe(query.Codes, query.CityId);
 
@@ -39,19 +40,28 @@ namespace DateTimeService.Application.Repositories
                     return result;
                 }
 
-                DeleteCachedDataFromInputData(query.Codes, dataFromCache);
+                DeleteCachedDataFromInputData(queryWithoutQuantity.Codes, dataFromCache);
             }
 
-            var newDates = await _databaseRepository.GetAvailableDate(query, token);
+            Task<AvailableDateResult> taskWithQuantity;
+            Task<AvailableDateResult> taskWithoutQuantity;
 
-            foreach (var item in newDates.Data)
-            {
-                result.Data.Add(item.Key, item.Value);
-            }
+            taskWithQuantity = Task.Run(() => _databaseRepository.GetAvailableDates(queryWithQuantity, token));
+            taskWithoutQuantity = Task.Run(() => _databaseRepository.GetAvailableDates(queryWithoutQuantity, token));
 
-            if (!query.CheckQuantity)
+            var results = await Task.WhenAll(taskWithQuantity, taskWithoutQuantity);
+
+            foreach (var taskResult in results)
             {
-                await _redisRepository.SaveAvailableDateResultToCache(newDates, query.CityId);
+                foreach (var item in taskResult.Data)
+                {
+                    result.Data.Add(item.Key, item.Value);
+                }
+
+                if (!taskResult.WithQuantity)
+                {
+                    await _redisRepository.SaveAvailableDateResultToCache(taskResult, query.CityId);
+                }
             }
             
             return result;

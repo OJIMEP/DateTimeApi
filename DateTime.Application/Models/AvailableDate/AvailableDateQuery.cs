@@ -44,5 +44,24 @@
             }
             Codes = items;
         }
+
+        public static void SplitByQuantity(AvailableDateQuery query, out AvailableDateQuery queryWithQuantity, out AvailableDateQuery queryWithoutQuantity)
+        {
+            queryWithQuantity = new AvailableDateQuery
+            {
+                CityId = query.CityId,
+                DeliveryTypes = query.DeliveryTypes,
+                CheckQuantity = true,
+                Codes = query.Codes.Where(item => item.Quantity > 1).ToList()
+            };
+
+            queryWithoutQuantity = new AvailableDateQuery
+            {
+                CityId = query.CityId,
+                DeliveryTypes = query.DeliveryTypes,
+                CheckQuantity = false,
+                Codes = query.Codes.Where(item => item.Quantity <= 1).ToList()
+            };
+        }
     }
 }

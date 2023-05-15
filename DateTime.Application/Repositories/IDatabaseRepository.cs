@@ -4,7 +4,7 @@ namespace DateTimeService.Application.Repositories
 {
     public interface IDatabaseRepository
     {
-        Task<AvailableDateResult> GetAvailableDate(AvailableDateQuery query, CancellationToken token = default);
+        Task<AvailableDateResult> GetAvailableDates(AvailableDateQuery query, CancellationToken token = default);
 
         Task<IntervalListResult> GetIntervalList(IntervalListQuery query, CancellationToken token = default);
 

@@ -2,6 +2,8 @@
 {
     public class AvailableDateResult
     {
+        public bool WithQuantity { get; set; }
+
         public Dictionary<string, AvailableDateElementResult> Data { get; set; }
 
         public AvailableDateResult()

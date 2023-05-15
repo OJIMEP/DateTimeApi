@@ -29,8 +29,18 @@ namespace DateTimeService.Application.Repositories
             _geoZones = geoZones;
         }
 
-        public async Task<AvailableDateResult> GetAvailableDate(AvailableDateQuery query, CancellationToken token = default)
+        public async Task<AvailableDateResult> GetAvailableDates(AvailableDateQuery query, CancellationToken token = default)
         {
+            var resultDict = new AvailableDateResult
+            {
+                WithQuantity = query.CheckQuantity
+            };
+
+            if (query.Codes.Count == 0)
+            {
+                return resultDict;
+            }
+
             DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token: token);
 
             IEnumerable<AvailableDateRecord> dbResult;
@@ -58,8 +68,6 @@ namespace DateTimeService.Application.Repositories
                 record.Courier = record.Courier.AddYears(-2000);
                 record.Self = record.Self.AddYears(-2000);
             };
-
-            var resultDict = new AvailableDateResult();
 
             try
             {
@@ -274,13 +282,8 @@ namespace DateTimeService.Application.Repositories
                 DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
                 globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
-            pickupWorkingHoursJoinType,
+                pickupWorkingHoursJoinType,
                 useIndexHint);
-
-            if (_configuration.GetValue<bool>("DisableKeepFixedPlan"))
-            {
-                queryText = queryText.Replace(", KEEPFIXED PLAN", "");
-            }
 
             return queryText;
         }
@@ -328,13 +331,8 @@ namespace DateTimeService.Application.Repositories
                 DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
                 DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
                 globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
-            globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
+                globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 dbConnection.DatabaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("UseIndexHintWarehouseDates") : ""); // index hint
-
-            if (_configuration.GetValue<bool>("DisableKeepFixedPlan"))
-            {
-                queryText = queryText.Replace(", KEEPFIXED PLAN", "");
-            }
 
             return queryText;
         }
@@ -382,11 +380,6 @@ namespace DateTimeService.Application.Repositories
                 globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 databaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("UseIndexHintWarehouseDates") : "", // index hint
                 pickupPointsString);
-
-            if (_configuration.GetValue<bool>("DisableKeepFixedPlan"))
-            {
-                queryText = queryText.Replace(", KEEPFIXED PLAN", "");
-            }
 
             return queryText;
         }
@@ -460,11 +453,11 @@ namespace DateTimeService.Application.Repositories
                     parameters.Clear();
                 }
 
-                if (item.PickupPoints.Count() > 0)
+                if (item.PickupPoints.Any())
                 {
                     var pickupPoint = $"@PickupPoint{index}";
-
-                    queryParameters.Add(pickupPoint, string.Join(",", item.PickupPoints));
+                    
+                    queryParameters.Add(pickupPoint, string.Join(",", item.PickupPoints.Take(10))); // читерство
 
                     var parameterStringPickup = $"({article}, {code}, {pickupPoint}, {quantity})";
                     parameters.Add(parameterStringPickup);

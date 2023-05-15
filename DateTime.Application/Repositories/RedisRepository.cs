@@ -21,7 +21,7 @@ namespace DateTimeService.Application.Repositories
 
         public async Task SaveAvailableDateResultToCache(AvailableDateResult result, string cityId)
         {
-            if (!redisEnabled())
+            if (!RedisEnabled())
             {
                 return;
             }
@@ -38,12 +38,11 @@ namespace DateTimeService.Application.Repositories
             }
         }
 
-
         public async Task<AvailableDateResult> GetAvailableDateResultGromCashe(List<CodeItemQuery> queryItems, string cityId)
         {
             var result = new AvailableDateResult();
 
-            if (!redisEnabled())
+            if (!RedisEnabled())
             {
                 return result;
             }
@@ -75,7 +74,7 @@ namespace DateTimeService.Application.Repositories
             return result;
         }
 
-        private bool redisEnabled()
+        private bool RedisEnabled()
         {
             return _settings.Enabled && _redis.IsConnected;
         }
