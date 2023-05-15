@@ -1,6 +1,7 @@
 ﻿using DateTimeService.Api;
 using DateTimeService.Application.Database.DatabaseManagement;
 using DateTimeService.Application.Logging;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,8 @@ namespace DateTimeService.Application.Database
     public interface IDbConnectionFactory
     {
         Task<DbConnection> CreateConnectionAsync (CancellationToken token = default);
+
+        Task<DbConnection> GetDbConnection(CancellationToken token = default);
     }
 
     public class SqlConnectionFactory : IDbConnectionFactory
@@ -18,16 +21,45 @@ namespace DateTimeService.Application.Database
         private readonly IReadableDatabase _databaseService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<SqlConnectionFactory> _logger;
+        private readonly IHttpContextAccessor _contextAccessor;
 
         private readonly bool _checkConnection;
 
-        public SqlConnectionFactory(IReadableDatabase databaseService, IConfiguration configuration, ILogger<SqlConnectionFactory> logger)
+        public SqlConnectionFactory(IReadableDatabase databaseService, IConfiguration configuration, ILogger<SqlConnectionFactory> logger, IHttpContextAccessor contextAccessor)
         {
             _databaseService = databaseService;
             _configuration = configuration;
             _logger = logger;
 
-            _checkConnection = !_configuration.GetValue<bool>("DisableConnectionCheck");       
+            _checkConnection = !_configuration.GetValue<bool>("DisableConnectionCheck");
+            _contextAccessor = contextAccessor;
+        }
+
+        public async Task<DbConnection> GetDbConnection(CancellationToken token = default)
+        {
+            DbConnection dbConnection;
+
+            try
+            {
+                dbConnection = await CreateConnectionAsync(token);
+
+                lock (_contextAccessor.HttpContext.Items)
+                {
+                    _contextAccessor.HttpContext.Items["DatabaseConnection"] = dbConnection.ConnectionWithoutCredentials;
+                    _contextAccessor.HttpContext.Items["TimeDatabaseConnection"] = dbConnection.ConnectTimeInMilliseconds;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+
+            if (dbConnection.Connection == null)
+            {
+                throw new Exception("Не найдено доступное соединение к БД");
+            }
+
+            return dbConnection;
         }
 
         public async Task<DbConnection> CreateConnectionAsync(CancellationToken token = default)

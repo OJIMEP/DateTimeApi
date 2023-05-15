@@ -164,7 +164,7 @@ namespace DateTimeService.Application.Repositories
                     throw new Exception(response.ToString());
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }

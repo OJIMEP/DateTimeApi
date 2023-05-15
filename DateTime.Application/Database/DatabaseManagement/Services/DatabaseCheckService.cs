@@ -111,7 +111,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
                 string query = String.Join("", queryParts);
 
-                var DateMove = DateTime.Now.AddMonths(24000);
+                var DateMove = DateTime.Now.AddYears(2000);
                 var TimeNow = new DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second);
                 var EmptyDate = new DateTime(2001, 1, 1, 0, 0, 0);
                 var MaxDate = new DateTime(5999, 11, 11, 0, 0, 0);

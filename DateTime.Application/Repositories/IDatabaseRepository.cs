@@ -1,0 +1,13 @@
+﻿using DateTimeService.Application.Models;
+
+namespace DateTimeService.Application.Repositories
+{
+    public interface IDatabaseRepository
+    {
+        Task<AvailableDateResult> GetAvailableDate(AvailableDateQuery query, CancellationToken token = default);
+
+        Task<IntervalListResult> GetIntervalList(IntervalListQuery query, CancellationToken token = default);
+
+        Task<DeliveryTypeAvailabilityResult> GetDeliveryTypeAvailability(AvailableDeliveryTypesQuery query, string deliveryType, CancellationToken token = default);
+    }
+}

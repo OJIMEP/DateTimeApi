@@ -16,7 +16,7 @@ namespace DateTimeService.Application
         {
             services
                 .AddDatabaseManagement()
-                .AddRepositories()
+                .AddRepositories(configuration)
                 .AddHttpClients()
                 .AddRedis(configuration)
                 .ConfigureHangfire();
@@ -36,9 +36,21 @@ namespace DateTimeService.Application
             return services;
         }
 
-        private static IServiceCollection AddRepositories(this IServiceCollection services)
+        private static IServiceCollection AddRepositories(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddSingleton<IDateTimeRepository, DateTimeRepository>();
+
+            if (configuration.GetValue<bool>("UseDapper"))
+            {
+                services.AddSingleton<IDatabaseRepository, DatabaseRepositoryDapper>();
+            }
+            else
+            {
+                services.AddSingleton<IDatabaseRepository, DatabaseRepositoryBasic>();
+            }
+
+            services.AddSingleton<RedisRepository>();
+
             services.AddTransient<IGeoZones, GeoZones>();
 
             return services;
