@@ -51,17 +51,27 @@
             {
                 CityId = query.CityId,
                 DeliveryTypes = query.DeliveryTypes,
-                CheckQuantity = true,
-                Codes = query.Codes.Where(item => item.Quantity > 1).ToList()
+                CheckQuantity = true
             };
 
             queryWithoutQuantity = new AvailableDateQuery
             {
                 CityId = query.CityId,
                 DeliveryTypes = query.DeliveryTypes,
-                CheckQuantity = false,
-                Codes = query.Codes.Where(item => item.Quantity <= 1).ToList()
+                CheckQuantity = false
             };
+
+            foreach (var item in query.Codes) 
+            { 
+                if (item.Quantity > 1)
+                {
+                    queryWithQuantity.Codes.Add(item);
+                }
+                else
+                {
+                    queryWithoutQuantity.Codes.Add(item);
+                }
+            }
         }
     }
 }

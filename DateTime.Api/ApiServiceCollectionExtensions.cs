@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using System.Text;
 
 namespace DateTimeService.Api
@@ -69,6 +70,15 @@ namespace DateTimeService.Api
                     ValidIssuer = configuration["JWT:ValidIssuer"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"])),
                     ValidateLifetime = true
+                };
+                options.Events = new JwtBearerEvents()
+                {
+                    OnAuthenticationFailed = c =>
+                    {
+                        Log.Error(c.Exception.ToString());
+                        return Task.CompletedTask;
+                    }
+
                 };
             })
             .AddPolicyScheme("JWT_OR_COOKIE", "JWT_OR_COOKIE", options =>

@@ -18,6 +18,7 @@ namespace DateTimeService.Application.Repositories
 
         public async Task<AvailableDateResult> GetAvailableDateAsync(AvailableDateQuery query, CancellationToken token = default)
         {
+            // разбиваем запрос на товары с количеством и без количества, так как для них разные SQL запросы
             AvailableDateQuery.SplitByQuantity(query, out AvailableDateQuery queryWithQuantity, out AvailableDateQuery queryWithoutQuantity);
 
             AvailableDateResult result = new();
@@ -43,13 +44,16 @@ namespace DateTimeService.Application.Repositories
                 DeleteCachedDataFromInputData(queryWithoutQuantity.Codes, dataFromCache);
             }
 
-            Task<AvailableDateResult> taskWithQuantity;
-            Task<AvailableDateResult> taskWithoutQuantity;
+            List<AvailableDateQuery> queryList = new()
+            {
+                queryWithoutQuantity,
+                queryWithQuantity
+            };
 
-            taskWithQuantity = Task.Run(() => _databaseRepository.GetAvailableDates(queryWithQuantity, token));
-            taskWithoutQuantity = Task.Run(() => _databaseRepository.GetAvailableDates(queryWithoutQuantity, token));
+            // для получившегося списка запросов запускаем параллельное получение данных
+            Task<AvailableDateResult>[] tasksArray = queryList.Select(subquery => Task.Run(() => _databaseRepository.GetAvailableDates(subquery, token))).ToArray();
 
-            var results = await Task.WhenAll(taskWithQuantity, taskWithoutQuantity);
+            var results = await Task.WhenAll(tasksArray);
 
             foreach (var taskResult in results)
             {
