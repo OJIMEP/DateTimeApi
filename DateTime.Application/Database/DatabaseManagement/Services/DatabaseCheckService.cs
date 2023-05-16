@@ -250,11 +250,9 @@ namespace DateTimeService.Application.Database.DatabaseManagement
         {
             var elasticHost = _configuration["ElasticConfiguration:Host"];
             var elasticPort = _configuration.GetValue<int>("ElasticConfiguration:Port");
-            var elasticLogin = _configuration["ElasticConfiguration:Login"];
-            var elasticPass = _configuration["ElasticConfiguration:Password"];
+            var ApiKey = _configuration["ElasticConfiguration:ApiKey"];
             var indexPath = _configuration["ElasticConfiguration:IndexName"];
-            var authenticationString = elasticLogin + ":" + elasticPass;
-            var base64EncodedAuthenticationString = Convert.ToBase64String(Encoding.UTF8.GetBytes(authenticationString));
+            
             var analyzeInterval = "now-1m";
             var clearCacheCriterias = _configuration.GetSection("ClearCacheCriterias").Get<List<ClearCacheCriteria>>();
 
@@ -267,7 +265,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
             var serverIP = ipHostInfo.AddressList.Where(s => s.AddressFamily == AddressFamily.InterNetwork).First().ToString();
             HttpRequestMessage requestMessage = new(HttpMethod.Get, elasticUri.Uri);
-            requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString);
+            requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("ApiKey", ApiKey);
 
             var searchrequest = new Request
             {
