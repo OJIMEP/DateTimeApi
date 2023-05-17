@@ -35,4 +35,10 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="AdditionalFiles\appsettings_example.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
