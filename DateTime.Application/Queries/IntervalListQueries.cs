@@ -32,10 +32,8 @@ where
 Select
 	Товары._Fld8276RRef AS НоменклатураСсылка,
 	_Fld8280 AS Количество,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
     #Temp_OrderInfo.ПВЗСсылка AS Склад,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	#Temp_OrderInfo.ЗаказСсылка AS ЗаказСсылка
+    #Temp_OrderInfo.ЗаказСсылка AS ЗаказСсылка
 Into #Temp_GoodsOrder
 From 
 	dbo._Document317_VT8273 Товары
@@ -85,10 +83,8 @@ Select
 	Упаковки._IDRRef AS УпаковкаСсылка,
     Номенклатура._Fld21822RRef as ТНВЭДСсылка,
     Номенклатура._Fld3515RRef as ТоварнаяКатегорияСсылка,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	0x00000000000000000000000000000000 AS Склад,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	Sum(T1.quantity) As Количество	
+    0x00000000000000000000000000000000 AS Склад,
+    Sum(T1.quantity) As Количество	
 INTO #Temp_Goods
 From 
 	#Temp_GoodsRaw T1
@@ -112,10 +108,8 @@ Select
 	Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
     Номенклатура._Fld3515RRef,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	0x00000000000000000000000000000000,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	Sum(T1.quantity)	
+    0x00000000000000000000000000000000,
+    Sum(T1.quantity)	
 From 
 	#Temp_GoodsRaw T1
 	Inner Join 	dbo._Reference149 Номенклатура With (NOLOCK) 
@@ -138,10 +132,8 @@ Select
 	Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
     Номенклатура._Fld3515RRef,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	T1.Склад,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	Sum(T1.Количество)	
+    T1.Склад,
+    Sum(T1.Количество)	
 From 
 	#Temp_GoodsOrder T1
 	Inner Join 	dbo._Reference149 Номенклатура With (NOLOCK) 
@@ -157,16 +149,13 @@ Where
 	Номенклатура._Fld3514RRef = 0x84A6131B6DC5555A4627E85757507687 -- тип номенклатуры товар
 Group By 
 	Номенклатура._IDRRef,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	T1.Склад,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	Упаковки._IDRRef,
+    T1.Склад,
+    Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
     Номенклатура._Fld3515RRef
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 /*Конец товаров*/
 
---21век.Левковский 06.02.2023 Старт DEV1C-78996
 /*Маркируемые коды ТНВЭД*/
 SELECT DISTINCT
 T1.КодТНВЭД AS КодТНВЭД
@@ -182,7 +171,6 @@ FROM (SELECT
 		GROUP BY T3._Fld27184RRef) T2
 	INNER JOIN dbo._InfoRg27183 T4
 	ON T2.КодТНВЭД = T4._Fld27184RRef AND T2.MAXPERIOD_ = T4._Period AND T4._Fld28120 = 0x01) T1
---21век.Левковский 06.02.2023 Финиш DEV1C-78996
 
 /*Размеры корзины в целом для расчета габаритов*/
 SELECT
@@ -238,13 +226,11 @@ SELECT
     T1.НоменклатураСсылка AS НоменклатураСсылка,
     T2._Fld6000 * T1.Количество AS Вес,
     T2._Fld6006 * T1.Количество AS Объем,
-    --21век.Левковский 06.02.2023 Старт DEV1C-78996
     SUM(CASE 
         WHEN MarkedCodes.КодТНВЭД IS NOT NULL AND T1.Количество >= 5
             THEN T1.Количество * T3.ДополнительноеВремяМаркируемыеТовары
         ELSE 0
     END) AS УсловиеПоМаркируемымТоварам,		
-    --21век.Левковский 06.02.2023 Финиш DEV1C-78996
     CASE
         WHEN (
             (T2._Fld6006 > 0.8)
@@ -291,9 +277,7 @@ FROM
             T6._Fld24101 AS Fld24101_,
             T6._Fld24102 AS Fld24102_,
             T6._Fld26615 AS Fld26615_,
-            --21век.Левковский 06.02.2023 Старт DEV1C-78996
             T6._Fld30450 AS ДополнительноеВремяМаркируемыеТовары,
-            --21век.Левковский 06.02.2023 Старт DEV1C-78996
             T6._Fld26616 AS Fld26616_
         FROM
             (
@@ -304,10 +288,8 @@ FROM
             ) T4
             INNER JOIN dbo._InfoRg24088 T6 ON T4.MAXPERIOD_ = T6._Period
     ) T3 ON 1 = 1
-    --21век.Левковский 06.02.2023 Старт DEV1C-78996
     LEFT OUTER JOIN #Temp_MarkedCodes AS MarkedCodes
     ON MarkedCodes.КодТНВЭД = T1.ТНВЭДСсылка
-    --21век.Левковский 06.02.2023 Финиш DEV1C-78996
 GROUP BY
     T1.НоменклатураСсылка,
     T2._Fld6000 * T1.Количество,
@@ -418,9 +400,7 @@ SELECT
 			AND SUM(T1.Вес) >= 600.0 THEN T2.Fld26614_
     END As УсловиеВесОбъем,
     T2.Fld24089_ As МинимальноеВремя,
-    --21век.Левковский 06.02.2023 Старт DEV1C-78996
     SUM(T1.УсловиеПоМаркируемымТоварам) AS УсловиеПоМаркируемымТоварам,
-    --21век.Левковский 06.02.2023 Финиш DEV1C-78996
     SUM(T1.УсловиеЭтажМассаПоТоварам) As УсловиеЭтажМассаОбщ
 INTO #Temp_Time1
 FROM
@@ -473,9 +453,7 @@ SELECT
 	+ ISNULL(T2.УсловиеЭтажМассаОбщ, 0) 
 	+ ISNULL(T2.УсловиеВесОбъем, 0) 
 	+ ISNULL(T1.УсловиеСпособОплаты, 0) 
-	--21век.Левковский 06.02.2023 Старт DEV1C-78996
 	+ ISNULL(T2.УсловиеПоМаркируемымТоварам, 0)
-	--21век.Левковский 06.02.2023 Финиш DEV1C-78996
 	AS ВремяВыполнения
 Into #Temp_TimeService
 FROM
@@ -487,24 +465,18 @@ OPTION (KEEP PLAN, KEEPFIXED PLAN);
 /*Группа планирования*/
 Select ГруппыПланирования._IDRRef AS ГруппаПланирования,
 	ГруппыПланирования._Fld23302RRef AS Склад,
-    --21век.Левковский 06.02.2023 Старт DEV1C-75871
-	--ГруппыПланирования._Fld25137 AS ВремяДоступностиНаСегодня,
     CASE WHEN @P_YourTimeDelivery = 1
 		THEN ГруппыПланирования._Fld30397
 		ELSE ГруппыПланирования._Fld25137
 	END AS ВремяДоступностиНаСегодня,
-    --21век.Левковский 06.02.2023 Финиш DEV1C-75871
-	ГруппыПланирования._Fld25138 AS ВремяСтопаСегодня,
+    ГруппыПланирования._Fld25138 AS ВремяСтопаСегодня,
 	ГруппыПланирования._Fld25139 AS ВремяДоступностиНаЗавтра,
 	ГруппыПланирования._Fld25140 AS ВремяСтопаЗавтра,
-    --21век.Левковский 06.02.2023 Старт DEV1C-75871
-	--IsNull(ГруппыПланирования._Fld25519, @P_EmptyDate)AS ГруппаПланированияДобавляемоеВремя,
     CASE WHEN @P_YourTimeDelivery = 1
 		THEN ГруппыПланирования._Fld30399
 		ELSE ГруппыПланирования._Fld25519
 	END AS ГруппаПланированияДобавляемоеВремя,
-    --21век.Левковский 06.02.2023 Финиш DEV1C-75871
-	1 AS Основная,
+    1 AS Основная,
 	ГруппыПланирования._Description
 Into #Temp_PlanningGroups
 From
@@ -515,35 +487,27 @@ dbo._Reference23294 ГруппыПланирования With (NOLOCK)
 	AND ГруппыПланирования._Fld25141 = 0x01--участвует в расчете мощности
 	AND ГруппыПланирования._Fld23301RRef IN (Select Габарит From #Temp_Dimensions With (NOLOCK))  --габариты
 	AND ГруппыПланирования._Marked = 0x00
-    -- 21век.Левковский 17.03.2023 Старт DEV1C-75871
-	AND CASE WHEN @P_YourTimeDelivery = 1
+    AND CASE WHEN @P_YourTimeDelivery = 1
 		THEN
 			ГруппыПланирования._Fld30395 --участвует в доставке в ваше время
 		ELSE 0x01
 		END = 0x01		
-	-- 21век.Левковский 17.03.2023 Финиш DEV1C-75871
 UNION ALL
 Select 
 	ПодчиненнаяГП._IDRRef AS ГруппаПланирования,
 	ГруппыПланирования._Fld23302RRef AS Склад,
-    --21век.Левковский 06.02.2023 Старт DEV1C-75871
-	--ПодчиненнаяГП._Fld25137 AS ВремяДоступностиНаСегодня,
     CASE WHEN @P_YourTimeDelivery = 1
 		THEN ПодчиненнаяГП._Fld30397
 		ELSE ПодчиненнаяГП._Fld25137
 	END AS ВремяДоступностиНаСегодня,
-    --21век.Левковский 06.02.2023 Финиш DEV1C-75871
-	ПодчиненнаяГП._Fld25138 AS ВремяСтопаСегодня,
+    ПодчиненнаяГП._Fld25138 AS ВремяСтопаСегодня,
 	ПодчиненнаяГП._Fld25139 AS ВремяДоступностиНаЗавтра,
 	ПодчиненнаяГП._Fld25140 AS ВремяСтопаЗавтра,
-	--21век.Левковский 06.02.2023 Старт DEV1C-75871
-	--IsNull(ПодчиненнаяГП._Fld25519, @P_EmptyDate)AS ГруппаПланированияДобавляемоеВремя,
-    CASE WHEN @P_YourTimeDelivery = 1
+	CASE WHEN @P_YourTimeDelivery = 1
 		THEN ПодчиненнаяГП._Fld30399
 		ELSE ПодчиненнаяГП._Fld25519
 	END AS ГруппаПланированияДобавляемоеВремя,
-    --21век.Левковский 06.02.2023 Финиш DEV1C-75871
-	0,
+    0,
 	ПодчиненнаяГП._Description
 From
 	dbo._Reference23294 ГруппыПланирования With (NOLOCK)
@@ -552,16 +516,12 @@ From
 		and _Reference23294_VT23309._Fld23311RRef in (Select ЗонаДоставкиРодительСсылка From #Temp_GeoData)
 	Inner Join dbo._Reference23294 ПодчиненнаяГП
 			On  ГруппыПланирования._Fld26526RRef = ПодчиненнаяГП._IDRRef
-                -- 21век.Левковский 17.03.2023 Старт DEV1C-75871
-				AND CASE WHEN @P_YourTimeDelivery = 1
+                AND CASE WHEN @P_YourTimeDelivery = 1
 					THEN
 						ПодчиненнаяГП._Fld30395 --участвует в доставке в ваше время
 					ELSE 0x01
 					END = 0x01		
-				-- 21век.Левковский 17.03.2023 Финиш DEV1C-75871
 Where 
-	--ГруппыПланирования._Fld23302RRef IN (Select СкладНазначения From #Temp_DateAvailable) --склад
-	--AND 
 	ГруппыПланирования._Fld25141 = 0x01--участвует в расчете мощности
 	AND ГруппыПланирования._Marked = 0x00
 OPTION (KEEP PLAN, KEEPFIXED PLAN)
@@ -694,10 +654,8 @@ SELECT
     T1.ДатаСобытия,
     ISNULL(T3.ДатаПрибытия, T2.ДатаПрибытия) AS ДатаДоступности,
     1 AS ТипИсточника,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
     1 AS ЭтоСклад,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения
+    ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения
 INTO #Temp_Sources
 FROM
     #Temp_Remains T1 WITH(NOLOCK)
@@ -722,12 +680,9 @@ SELECT
     T4.СкладИсточника,
     T4.ДатаСобытия,
 	DATEADD(SECOND, DATEDIFF(SECOND, @P_EmptyDate, IsNull(#Temp_PlanningGroups.ГруппаПланированияДобавляемоеВремя,@P_EmptyDate)), T5.ДатаПрибытия),
-    --T5.ДатаПрибытия,
     2,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
     0,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	T5.СкладНазначения
+    T5.СкладНазначения
 FROM
     #Temp_Remains T4 WITH(NOLOCK)
     INNER JOIN #Temp_WarehouseDates T5 WITH(NOLOCK)
@@ -749,12 +704,9 @@ SELECT
     T6.СкладИсточника,
     T6.ДатаСобытия,
 	DATEADD(SECOND, DATEDIFF(SECOND, @P_EmptyDate, IsNull(#Temp_PlanningGroups.ГруппаПланированияДобавляемоеВремя,@P_EmptyDate)), T7.ДатаПрибытия),
-    --T7.ДатаПрибытия,
     3,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
     0,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	T7.СкладНазначения
+    T7.СкладНазначения
 FROM
     #Temp_Remains T6 WITH(NOLOCK)
     INNER JOIN #Temp_WarehouseDates T7 WITH(NOLOCK)
@@ -778,14 +730,12 @@ Select
 	векРезервированиеТоваров._Fld21424,
 	DATEADD(SECOND, DATEDIFF(SECOND, @P_EmptyDate, IsNull(#Temp_PlanningGroups.ГруппаПланированияДобавляемоеВремя,@P_EmptyDate)), IsNULL(#Temp_WarehouseDates.ДатаПрибытия, #Temp_MinimumWarehouseDates.ДатаПрибытия)),
 	4,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	CASE 
+    CASE 
 		WHEN Товары.Склад = векРезервированиеТоваров._Fld21410_RRRef
 			THEN 1
 		ELSE 0
 	END,
-    -- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-	ISNULL(#Temp_WarehouseDates.СкладНазначения, #Temp_MinimumWarehouseDates.СкладНазначения) AS СкладНазначения
+    ISNULL(#Temp_WarehouseDates.СкладНазначения, #Temp_MinimumWarehouseDates.СкладНазначения) AS СкладНазначения
 From
 	dbo._AccumRg21407 векРезервированиеТоваров With (READCOMMITTED)
 		Inner Join  #Temp_GoodsOrder Товары
@@ -805,7 +755,6 @@ From
 			AND #Temp_PlanningGroups.Основная = 1
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
--- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 With TempSourcesGrouped AS
 (
 Select
@@ -815,7 +764,6 @@ Select
 	Sum(T1.Количество) AS ОстатокВсего
 From
 	#Temp_Sources T1
---Where T1.ЭтоСклад = 1
 Group by
 	T1.НоменклатураСсылка
 )
@@ -835,15 +783,12 @@ Group by
     T1.НоменклатураСсылка
 Having 
     min(Case when 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1;
--- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 
 With TempSourcesGrouped AS
 (
 Select
 	T1.НоменклатураСсылка AS НоменклатураСсылка,
-	-- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 	T1.ЭтоСклад,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 	Sum(T1.Количество) AS Количество,
 	T1.ДатаДоступности AS ДатаДоступности,
 	T1.СкладНазначения AS СкладНазначения
@@ -851,9 +796,7 @@ From
 	#Temp_Sources T1	
 Group by
 	T1.НоменклатураСсылка,
-	-- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 	T1.ЭтоСклад,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 	T1.ДатаДоступности,
 	T1.СкладНазначения
 )
@@ -869,8 +812,7 @@ From
 		On Источники1.НоменклатураСсылка = Источник2.НоменклатураСсылка
 		AND Источники1.СкладНазначения = Источник2.СкладНазначения
 			AND Источники1.ДатаДоступности >= Источник2.ДатаДоступности
-        -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-		Inner Join #Temp_StockSourcesAvailable
+        Inner Join #Temp_StockSourcesAvailable
 		on @P_StockPriority = 1
 			AND Источники1.НоменклатураСсылка = #Temp_StockSourcesAvailable.НоменклатураСсылка
 			AND ((Источники1.ЭтоСклад = 1
@@ -880,12 +822,11 @@ From
 				AND #Temp_StockSourcesAvailable.ОстаткаДостаточно = 1
 				AND #Temp_StockSourcesAvailable.ОстаткаНаСкладеДостаточно = 0
 				AND Источники1.ДатаДоступности >= #Temp_StockSourcesAvailable.ДатаДоступностиСклад))
-		-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 Group by
 	Источники1.НоменклатураСсылка,
 	Источники1.ДатаДоступности,
 	Источники1.СкладНазначения
--- 21век.Левковский 17.10.2022 Старт DEV1C-67918
+
 Union all
 
 Select
@@ -907,7 +848,6 @@ Group by
 	Источники1.НоменклатураСсылка,
 	Источники1.ДатаДоступности,
 	Источники1.СкладНазначения
--- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With Temp_ExchangeRates AS (
@@ -1083,7 +1023,6 @@ Group by
 	T4.СкладНазначения
 OPTION (HASH GROUP, KEEP PLAN, KEEPFIXED PLAN);
 
--- 21век.Левковский 17.10.2022 Старт DEV1C-78330
 With Temp_CountOfGoods AS
 (
 SELECT
@@ -1091,20 +1030,15 @@ SELECT
 FROM 
     #Temp_Goods T1 WITH(NOLOCK)
 )
--- 21век.Левковский 17.10.2022 Финиш DEV1C-78330
 Select Top 1 
 	Max(#Temp_ClosestDatesByGoods.БлижайшаяДата) AS DateAvailable, 
     СкладНазначения AS СкладНазначения
 Into #Temp_DateAvailable
 from #Temp_ClosestDatesByGoods With (NOLOCK)
--- 21век.Левковский 17.10.2022 Старт DEV1C-78330
     LEFT OUTER JOIN Temp_CountOfGoods
 	    ON 1 = 1
--- 21век.Левковский 17.10.2022 Финиш DEV1C-78330
 Group by СкладНазначения
--- 21век.Левковский 17.10.2022 Старт DEV1C-78330
 HAVING COUNT(DISTINCT #Temp_ClosestDatesByGoods.НоменклатураСсылка) = MIN(Temp_CountOfGoods.CountOfGoods)
--- 21век.Левковский 17.10.2022 Финиш DEV1C-78330
 Order by DateAvailable ASC
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 /*Тут закончился процесс оптимальной даты. Склад назначения нужен чтоб потом правильную ГП выбрать*/
@@ -1288,14 +1222,12 @@ SELECT
         ),
         T5._Period
     ) AS ВремяОкончания,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-75871
-	SUM(
+    SUM(
                 CASE
                     WHEN (T5._RecordKind = 0.0) THEN T5._Fld30385
                     ELSE -(T5._Fld30385)
                 END
             ) AS КоличествоЗаказовЗаИнтервалВремениВВашеВремя,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-75871
 	SUM(
                 CASE
                     WHEN (T5._RecordKind = 0.0) THEN T5._Fld25113
@@ -1329,8 +1261,7 @@ HAVING
                 END
             ) AS NUMERIC(16, 0)
         ) > 0.0
-        -- 21век.Левковский 17.10.2022 Старт DEV1C-75871
-		AND CASE WHEN @P_YourTimeDelivery = 1
+        AND CASE WHEN @P_YourTimeDelivery = 1
 			THEN CAST(
 				SUM(
 					CASE
@@ -1341,7 +1272,6 @@ HAVING
 			) 
 			ELSE 1.0
 			END > 0.0
-		-- 21век.Левковский 17.10.2022 Финиш DEV1C-75871
     )
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), KEEP PLAN, KEEPFIXED PLAN);
 ;
@@ -1353,9 +1283,7 @@ Select Distinct
 	ВременныеИнтервалы.ВремяНачалаНачальное AS ВремяНачалаНачальное,
 	ВременныеИнтервалы.ВремяОкончанияНачальное AS ВремяОкончанияНачальное,
 	ВременныеИнтервалы.КоличествоЗаказовЗаИнтервалВремени AS КоличествоЗаказовЗаИнтервалВремени,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-75871
-	ВременныеИнтервалы.КоличествоЗаказовЗаИнтервалВремениВВашеВремя AS КоличествоЗаказовЗаИнтервалВремениВВашеВремя,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-75871
+    ВременныеИнтервалы.КоличествоЗаказовЗаИнтервалВремениВВашеВремя AS КоличествоЗаказовЗаИнтервалВремениВВашеВремя,
 	ВременныеИнтервалы.ВремяНачала AS ВремяНачала,
 	ВременныеИнтервалы.ВремяОкончания AS ВремяОкончания,
 	ВременныеИнтервалы.Приоритет
@@ -1401,9 +1329,7 @@ from #Temp_IntervalsAll
 		AND (NOT (((@P_TimeNow >= T2._Fld25138))))
 WHERE
     #Temp_IntervalsAll.Период = @P_DateTimePeriodBegin
-    --21век.Левковский 06.02.2023 Старт DEV1C-75871
     AND @P_YourTimeDelivery = 0
-    --21век.Левковский 06.02.2023 Финиш DEV1C-75871
 
 Group By 
 	ГеоЗонаВременныеИнтервалы._Fld25128,
@@ -1411,7 +1337,6 @@ Group By
 	#Temp_IntervalsAll.Период,
 	#Temp_IntervalsAll.ГруппаПланирования,
 	#Temp_IntervalsAll.Геозона,
-	--T2._Fld25137,
 	#Temp_IntervalsAll.Приоритет,
     ГеоЗонаВременныеИнтервалы._Fld27342
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}'), KEEP PLAN, KEEPFIXED PLAN);
@@ -1450,9 +1375,7 @@ from #Temp_IntervalsAll
     )
 WHERE
     #Temp_IntervalsAll.Период = DATEADD(DAY, 1, @P_DateTimePeriodBegin)
-    --21век.Левковский 06.02.2023 Старт DEV1C-75871
     AND @P_YourTimeDelivery = 0
-    --21век.Левковский 06.02.2023 Финиш DEV1C-75871
 
 Group By 
 	ГеоЗонаВременныеИнтервалы._Fld25128,
@@ -1494,9 +1417,8 @@ from #Temp_IntervalsAll
 WHERE
 	#Temp_IntervalsAll.Период BETWEEN DATEADD(DAY, 2, @P_DateTimePeriodBegin) 
     AND @P_DateTimePeriodEnd --begin +2
-    --21век.Левковский 06.02.2023 Старт DEV1C-75871
     AND @P_YourTimeDelivery = 0
-    --21век.Левковский 06.02.2023 Финиш DEV1C-75871
+
 Group By 
 	ГеоЗонаВременныеИнтервалы._Fld25128,
 	ГеоЗонаВременныеИнтервалы._Fld25129,
@@ -1507,7 +1429,6 @@ Group By
     ГеоЗонаВременныеИнтервалы._Fld27342
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), KEEP PLAN, KEEPFIXED PLAN);
 
--- 21век.Левковский 17.10.2022 Старт DEV1C-75871
 Insert into #Temp_Intervals
 Select
 	DATEADD(
@@ -1643,7 +1564,6 @@ Group By
 	#Temp_IntervalsAll.Геозона,
 	#Temp_IntervalsAll.Приоритет
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}'), KEEP PLAN, KEEPFIXED PLAN);
--- 21век.Левковский 17.10.2022 Финиш DEV1C-75871
 
 select Период, Max(Приоритет) AS Приоритет into #Temp_PlanningGroupPriority from #Temp_Intervals Group by Период;
 /*Выше закончились рассчитанные интервалы*/
@@ -1717,9 +1637,7 @@ FROM
     T 
 	Inner Join _Reference114_VT25126 AS ГеоЗонаВременныеИнтервалы  With (NOLOCK) 
     On ГеоЗонаВременныеИнтервалы._Reference114_IDRRef In (Select Геозона From #Temp_GeoData)
-        --21век.Левковский 06.02.2023 Старт DEV1C-75871
         And @P_YourTimeDelivery = 0
-        --21век.Левковский 06.02.2023 Финиш DEV1C-75871
 	Inner Join #Temp_DateAvailable On DATEADD(
         SECOND,
         CAST(

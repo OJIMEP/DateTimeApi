@@ -35,7 +35,6 @@ where Геозона._IDRRef IN (
 	)
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
--- 21век.Левковский 02.05.2023 Старт DEV1C-88090
 Select Distinct
 	Номенклатура._IDRRef AS НоменклатураСсылка,
 	Номенклатура._Code AS code,
@@ -146,7 +145,6 @@ From
 		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
 
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
--- 21век.Левковский 02.05.2023 Финиш DEV1C-88090
 
 Select 
 	Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
@@ -161,9 +159,7 @@ Select
     Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка,
 	10 AS ВремяНаОбслуживание,
 	IsNull(ГруппыПланирования._IDRRef, 0x00000000000000000000000000000000) AS ГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Старт DEV1C-87229
 	IsNull(ГруппыПланирования._IDRRef, 0x00000000000000000000000000000000) AS ОсновнаяГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Финиш DEV1C-87229
 	IsNull(ГруппыПланирования._Description, '') AS ГруппаПланированияНаименование,
 	IsNull(ГруппыПланирования._Fld25519, @P_EmptyDate) AS ГруппаПланированияДобавляемоеВремя,
 	IsNull(ГруппыПланирования._Fld23302RRef, 0x00000000000000000000000000000000) AS ГруппаПланированияСклад,
@@ -195,9 +191,7 @@ Select
     Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка,
 	10 AS ВремяНаОбслуживание,
 	IsNull(ПодчиненнаяГП._IDRRef, 0x00000000000000000000000000000000) AS ГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Старт DEV1C-87229
 	IsNull(ГруппыПланирования._IDRRef, 0x00000000000000000000000000000000) AS ОсновнаяГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Финиш DEV1C-87229
 	IsNull(ПодчиненнаяГП._Description, '') AS ГруппаПланированияНаименование,
 	IsNull(ПодчиненнаяГП._Fld25519, @P_EmptyDate) AS ГруппаПланированияДобавляемоеВремя,
 	IsNull(ПодчиненнаяГП._Fld23302RRef, 0x00000000000000000000000000000000) AS ГруппаПланированияСклад,
@@ -998,7 +992,7 @@ Group By
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}'), KEEP PLAN, KEEPFIXED PLAN);
 
 INsert into #Temp_Intervals
-select distinct -- 21век.Левковский 03.05.2023 DEV1C-88090
+select distinct
 DATEADD(
         SECOND,
         CAST(
@@ -1017,18 +1011,8 @@ from #Temp_IntervalsAll
 		And #Temp_IntervalsAll.ВремяНачалаНачальное < ГеоЗонаВременныеИнтервалы._Fld25129
 WHERE
 	#Temp_IntervalsAll.Период BETWEEN DATEADD(DAY, 2, @P_DateTimePeriodBegin) AND @P_DateTimePeriodEnd --begin +2
--- 21век.Левковский 03.05.2023 Старт DEV1C-88090
---Group By 
-	--ГеоЗонаВременныеИнтервалы._Fld25128,
-	--ГеоЗонаВременныеИнтервалы._Fld25129,
-	--#Temp_IntervalsAll.Период,
-	--#Temp_IntervalsAll.ГруппаПланирования,
-	--#Temp_IntervalsAll.Геозона,
-    --#Temp_IntervalsAll.Приоритет
--- 21век.Левковский 03.05.2023 Финиш DEV1C-88090
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), KEEP PLAN, KEEPFIXED PLAN);
 
--- 21век.Левковский 03.05.2023 Старт DEV1C-87229
 Select Distinct ГруппаПланирования, ОсновнаяГруппаПланирования, Приоритет
 Into #Temp_PlanningGroups
 From #Temp_Goods t1
@@ -1049,8 +1033,7 @@ Select ВремяНачала, Период, t1.ГруппаПланирован
 Into #Temp_IntervalsWithGroupPriority
 From #Temp_Intervals t1
 	Inner Join #Temp_PlanningGroupsPriority t2
-	On t1.ГруппаПланирования = t2.ГруппаПланирования;   
--- 21век.Левковский 03.05.2023 Финиш DEV1C-87229
+	On t1.ГруппаПланирования = t2.ГруппаПланирования;
 ";
 
         public const string AvailableDate8DeliveryPowerBasic = @"With Temp_DeliveryPower AS
@@ -1100,10 +1083,7 @@ WHERE
 
         public const string AvailableDate9 = @"Temp_PlanningGroupPriority AS
 (
-    -- 21век.Левковский 03.05.2023 Старт DEV1C-87229
-    --select Период, Max(Приоритет) AS Приоритет from #Temp_Intervals Group by Период
     Select Период, Max(Приоритет) As Приоритет From #Temp_IntervalsWithGroupPriority Group By Период
-    -- 21век.Левковский 03.05.2023 Финиш DEV1C-87229
 )
 SELECT
     T1.НоменклатураСсылка,
@@ -1126,10 +1106,7 @@ Into #Temp_AvailableCourier
 FROM
     #Temp_ShipmentDatesDeliveryCourier T1 WITH(NOLOCK)
     Left JOIN Temp_DeliveryPower T2 --WITH(NOLOCK)
-        -- 21век.Левковский 03.05.2023 Старт DEV1C-87229
-        --Inner JOIN #Temp_Intervals T3 WITH(NOLOCK)
         Inner JOIN #Temp_IntervalsWithGroupPriority T3 WITH(NOLOCK)
-        -- 21век.Левковский 03.05.2023 Финиш DEV1C-87229
             Inner Join Temp_PlanningGroupPriority With (NOLOCK) 
             ON T3.Период = Temp_PlanningGroupPriority.Период 
             AND T3.Приоритет = Temp_PlanningGroupPriority.Приоритет
@@ -1192,7 +1169,6 @@ where Геозона._IDRRef IN (
 	)
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
--- 21век.Левковский 02.05.2023 Старт DEV1C-88090
 Select Distinct
 	Номенклатура._IDRRef AS НоменклатураСсылка,
 	Номенклатура._Code AS code,
@@ -1386,9 +1362,7 @@ Select
     Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка,
 	10 AS ВремяНаОбслуживание,
 	IsNull(ГруппыПланирования._IDRRef, 0x00000000000000000000000000000000) AS ГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Старт DEV1C-87229
 	IsNull(ГруппыПланирования._IDRRef, 0x00000000000000000000000000000000) AS ОсновнаяГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Финиш DEV1C-87229
 	IsNull(ГруппыПланирования._Description, '') AS ГруппаПланированияНаименование,
 	IsNull(ГруппыПланирования._Fld25519, @P_EmptyDate) AS ГруппаПланированияДобавляемоеВремя,
 	IsNull(ГруппыПланирования._Fld23302RRef, 0x00000000000000000000000000000000) AS ГруппаПланированияСклад,
@@ -1421,9 +1395,7 @@ Select
     Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка,
 	10 AS ВремяНаОбслуживание,
 	IsNull(ПодчиненнаяГП._IDRRef, 0x00000000000000000000000000000000) AS ГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Старт DEV1C-87229
 	IsNull(ГруппыПланирования._IDRRef, 0x00000000000000000000000000000000) AS ОсновнаяГруппаПланирования,
-	-- 21век.Левковский 03.05.2023 Финиш DEV1C-87229
 	IsNull(ПодчиненнаяГП._Description, '') AS ГруппаПланированияНаименование,
 	IsNull(ПодчиненнаяГП._Fld25519, @P_EmptyDate) AS ГруппаПланированияДобавляемоеВремя,
 	IsNull(ПодчиненнаяГП._Fld23302RRef, 0x00000000000000000000000000000000) AS ГруппаПланированияСклад,
@@ -1550,10 +1522,8 @@ OPTION (KEEP PLAN, KEEPFIXED PLAN);";
     T1.ДатаСобытия,
     ISNULL(T3.ДатаПрибытия, T2.ДатаПрибытия) AS ДатаДоступности,
     1 AS ТипИсточника,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	1 AS ЭтоСклад,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-    ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения
+    1 AS ЭтоСклад,
+	ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения
 INTO #Temp_Sources
 FROM
     #Temp_Remains T1 WITH(NOLOCK)
@@ -1579,10 +1549,8 @@ SELECT
     T4.ДатаСобытия,
     T5.ДатаПрибытия,
     2,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	0,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-    T5.СкладНазначения
+    0,
+	T5.СкладНазначения
 FROM
     #Temp_Remains T4 WITH(NOLOCK)
     INNER JOIN #Temp_WarehouseDates T5 WITH(NOLOCK)
@@ -1604,10 +1572,8 @@ SELECT
     T6.ДатаСобытия,
     T7.ДатаПрибытия,
     3,
-    -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
-	0,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
-    T7.СкладНазначения
+    0,
+	T7.СкладНазначения
 FROM
     #Temp_Remains T6 WITH(NOLOCK)
     INNER JOIN #Temp_WarehouseDates T7 WITH(NOLOCK)
@@ -1618,7 +1584,6 @@ WHERE
 	And T6.Источник_RTRef = 0x00000153
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
--- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 Select
 	T1.НоменклатураСсылка AS НоменклатураСсылка,
 	Min(T1.ДатаДоступности) AS ДатаДоступности,
@@ -1643,7 +1608,6 @@ Select
 	Sum(T1.Количество) AS ОстатокВсего
 From
 	#Temp_SourcesGrouped T1
---Where T1.ЭтоСклад = 1
 Group By
 	T1.НоменклатураСсылка
 )
@@ -1663,25 +1627,20 @@ Group By
 	T1.НоменклатураСсылка
 Having 
     min(Case when 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1;
--- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 
 With TempSourcesGrouped AS
 (
 Select
 	T1.НоменклатураСсылка AS НоменклатураСсылка,
 	Sum(T1.Количество) AS Количество,
-	-- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 	T1.ЭтоСклад,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 	T1.ДатаДоступности AS ДатаДоступности,
 	T1.СкладНазначения AS СкладНазначения
 From
 	#Temp_Sources T1	
 Group by
 	T1.НоменклатураСсылка,
-	-- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 	T1.ЭтоСклад,
-	-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 	T1.ДатаДоступности,
 	T1.СкладНазначения
 )
@@ -1697,7 +1656,6 @@ From
 		On Источники1.НоменклатураСсылка = Источник2.НоменклатураСсылка
 		AND Источники1.СкладНазначения = Источник2.СкладНазначения
 			AND Источники1.ДатаДоступности >= Источник2.ДатаДоступности
-        -- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 		Inner Join #Temp_StockSourcesAvailable
 		on @P_StockPriority = 1
 			AND Источники1.НоменклатураСсылка = #Temp_StockSourcesAvailable.НоменклатураСсылка
@@ -1708,13 +1666,11 @@ From
 				AND #Temp_StockSourcesAvailable.ОстаткаДостаточно = 1
 				AND #Temp_StockSourcesAvailable.ОстаткаНаСкладеДостаточно = 0
 				AND Источники1.ДатаДоступности >= #Temp_StockSourcesAvailable.ДатаДоступностиСклад))
-		-- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 Group by
 	Источники1.НоменклатураСсылка,
 	Источники1.ДатаДоступности,
 	Источники1.СкладНазначения
 
--- 21век.Левковский 17.10.2022 Старт DEV1C-67918
 Union All
 
 Select
@@ -1736,7 +1692,6 @@ Group By
 	Источники1.НоменклатураСсылка,
 	Источники1.ДатаДоступности,
 	Источники1.СкладНазначения
--- 21век.Левковский 17.10.2022 Финиш DEV1C-67918
 OPTION (HASH GROUP, KEEP PLAN, KEEPFIXED PLAN);";
 
         public const string AvailableDateWithCount5 = @"
