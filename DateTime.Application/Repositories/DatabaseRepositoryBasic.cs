@@ -238,14 +238,15 @@ namespace DateTimeService.Application.Repositories
 
             List<string> queryParts = new()
             {
-                query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount1 : AvailableDateQueries.AvailableDate1,
-                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate2MinimumWarehousesCustom : AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
-                query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount3 : AvailableDateQueries.AvailableDate3,
+                query.CheckQuantity? AvailableDateQueries.AvailableDateWithCount1 : AvailableDateQueries.AvailableDate1,
+                //AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
+                dbConnection.UseAggregations ? AvailableDateQueries.AvailableDate2MinimumWarehousesCustom : AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
+                query.CheckQuantity ? AvailableDateQueries.AvailableDateWithCount3 : AvailableDateQueries.AvailableDate3,
                 AvailableDateQueries.AvailableDate4SourcesWithPrices,
-                query.CheckQuantity == true ? AvailableDateQueries.AvailableDateWithCount5 : AvailableDateQueries.AvailableDate5,
-                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate6IntervalsCustom : AvailableDateQueries.AvailableDate6IntervalsBasic,
+                query.CheckQuantity ? AvailableDateQueries.AvailableDateWithCount5 : AvailableDateQueries.AvailableDate5,
+                dbConnection.UseAggregations ? AvailableDateQueries.AvailableDate6IntervalsCustom : AvailableDateQueries.AvailableDate6IntervalsBasic,
                 AvailableDateQueries.AvailableDate7,
-                dbConnection.UseAggregations == true ? AvailableDateQueries.AvailableDate8DeliveryPowerCustom : AvailableDateQueries.AvailableDate8DeliveryPowerBasic,
+                dbConnection.UseAggregations ? AvailableDateQueries.AvailableDate8DeliveryPowerCustom : AvailableDateQueries.AvailableDate8DeliveryPowerBasic,
                 AvailableDateQueries.AvailableDate9
             };
 
@@ -504,11 +505,8 @@ namespace DateTimeService.Application.Repositories
                 cmdGoodsTable.Parameters[article].Value = item.Article;
 
                 cmdGoodsTable.Parameters.Add(code, SqlDbType.NVarChar, 11);
-                if (String.IsNullOrEmpty(item.Code))
-                    cmdGoodsTable.Parameters[code].Value = DBNull.Value;
-                else
-                    cmdGoodsTable.Parameters[code].Value = item.Code;
-
+                cmdGoodsTable.Parameters[code].Value = string.IsNullOrEmpty(item.Code) ? DBNull.Value : item.Code;
+                
                 //cmdGoodsTable.Parameters.Add(quantity, SqlDbType.Int, 10);
                 //cmdGoodsTable.Parameters[quantity].Value = item.Quantity;
 

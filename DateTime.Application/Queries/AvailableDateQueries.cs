@@ -36,7 +36,7 @@ where Геозона._IDRRef IN (
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 -- 21век.Левковский 02.05.2023 Старт DEV1C-88090
-Select 
+Select Distinct
 	Номенклатура._IDRRef AS НоменклатураСсылка,
 	Номенклатура._Code AS code,
 	Номенклатура._Fld3480 AS article,
@@ -62,7 +62,7 @@ From
 		And Упаковки._Fld6003RRef = Номенклатура._Fld3489RRef
 		And Упаковки._Marked = 0x00
 Union all
-Select 
+Select Distinct
 	Номенклатура._IDRRef,
 	Номенклатура._Code,
 	Номенклатура._Fld3480,
@@ -97,7 +97,8 @@ WITH cte AS (
 		WHERE t1.PickupPoint is not null
     ) t2
 )
-SELECT t1.Article, t1.code, cte.PickupPoint
+SELECT Distinct
+    t1.Article, t1.code, cte.PickupPoint
 INTO #Temp_GoodsRawParsed
 FROM #Temp_GoodsRaw t1
 Left JOIN cte
@@ -1183,26 +1184,13 @@ where Геозона._IDRRef IN (
 	)
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
-With Temp_GoodsRawParsed AS
-(
-select 
-	t1.Article, 
-	t1.code,
-    t1.quantity,
-	value AS PickupPoint 
-from #Temp_GoodsRaw t1
-	cross apply 
-		string_split(IsNull(t1.PickupPoint,'-'), ',')
-Where t1.quantity > 0
-)
-Select 
+-- 21век.Левковский 02.05.2023 Старт DEV1C-88090
+Select Distinct
 	Номенклатура._IDRRef AS НоменклатураСсылка,
 	Номенклатура._Code AS code,
 	Номенклатура._Fld3480 AS article,
 	Номенклатура._Fld3489RRef AS ЕдиницаИзмерения,
 	Номенклатура._Fld3526RRef AS Габариты,
-    T1.quantity AS Количество,
-	#Temp_PickupPoints.СкладСсылка AS СкладПВЗСсылка,
 	Упаковки._IDRRef AS УпаковкаСсылка,
 	Упаковки._Fld6000 AS Вес,
 	Упаковки._Fld6006 AS Объем,
@@ -1211,14 +1199,14 @@ Select
 	Упаковки._Fld6009 AS Ширина,
     Номенклатура._Fld21822RRef as ТНВЭДСсылка,
     Номенклатура._Fld3515RRef as ТоварнаяКатегорияСсылка
-INTO #Temp_GoodsBegin
+INTO #Temp_GoodsPackages
 From
-	Temp_GoodsRawParsed T1
+	#Temp_GoodsRaw T1
 	Inner Join 	dbo._Reference149 Номенклатура With (NOLOCK) 
-		ON T1.code is NULL and T1.Article = Номенклатура._Fld3480
-	Left Join #Temp_PickupPoints  
-		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
-    Inner Join dbo._Reference256 Упаковки With (NOLOCK)
+		ON T1.code is NULL 
+		and T1.PickupPoint is null
+		and T1.Article = Номенклатура._Fld3480
+	Inner Join dbo._Reference256 Упаковки With (NOLOCK)
 		On 
 		Упаковки._OwnerID_TYPE = 0x08  
 		AND Упаковки.[_OwnerID_RTRef] = 0x00000095
@@ -1227,14 +1215,12 @@ From
 		And Упаковки._Fld6003RRef = Номенклатура._Fld3489RRef
 		AND Упаковки._Marked = 0x00
 union all
-Select 
+Select Distinct
 	Номенклатура._IDRRef,
 	Номенклатура._Code,
 	Номенклатура._Fld3480,
 	Номенклатура._Fld3489RRef,
 	Номенклатура._Fld3526RRef,
-    T1.quantity AS Количество,
-	#Temp_PickupPoints.СкладСсылка,
 	Упаковки._IDRRef AS УпаковкаСсылка,
 	Упаковки._Fld6000 AS Вес,
 	Упаковки._Fld6006 AS Объем,
@@ -1244,12 +1230,12 @@ Select
     Номенклатура._Fld21822RRef as ТНВЭДСсылка,
     Номенклатура._Fld3515RRef as ТоварнаяКатегорияСсылка
 From 
-	Temp_GoodsRawParsed T1
+	#Temp_GoodsRaw T1
 	Inner Join 	dbo._Reference149 Номенклатура With (NOLOCK) 
-		ON T1.code is not NULL and T1.code = Номенклатура._Code
-	Left Join #Temp_PickupPoints  
-		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
-    Inner Join dbo._Reference256 Упаковки With (NOLOCK)
+		ON T1.code is not NULL 
+		and T1.PickupPoint is null
+		and T1.code = Номенклатура._Code
+	Inner Join dbo._Reference256 Упаковки With (NOLOCK)
 		On 
 		Упаковки._OwnerID_TYPE = 0x08  
 		AND Упаковки.[_OwnerID_RTRef] = 0x00000095
@@ -1257,6 +1243,72 @@ From
 		Номенклатура._IDRRef = Упаковки._OwnerID_RRRef		
 		And Упаковки._Fld6003RRef = Номенклатура._Fld3489RRef
 		AND Упаковки._Marked = 0x00
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
+WITH cte AS (
+    SELECT distinct value AS PickupPoint
+    FROM #Temp_GoodsRaw t1
+    CROSS APPLY (
+        SELECT value
+        FROM STRING_SPLIT(t1.PickupPoint, ',')
+		WHERE t1.PickupPoint is not null
+    ) t2
+)
+SELECT Distinct
+    t1.Article, t1.code, t1.quantity, cte.PickupPoint
+INTO #Temp_GoodsRawParsed
+FROM #Temp_GoodsRaw t1
+Left JOIN cte
+ ON t1.PickupPoint is not null;
+
+Select 
+	Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
+	Номенклатура.code AS code,
+	Номенклатура.article AS article,
+	Номенклатура.ЕдиницаИзмерения AS ЕдиницаИзмерения,
+	Номенклатура.Габариты AS Габариты,
+    T1.quantity AS Количество,
+	#Temp_PickupPoints.СкладСсылка AS СкладПВЗСсылка,
+	Номенклатура.УпаковкаСсылка AS УпаковкаСсылка,
+	Номенклатура.Вес AS Вес,
+	Номенклатура.Объем AS Объем,
+	Номенклатура.Высота AS Высота,
+	Номенклатура.Глубина AS Глубина,
+	Номенклатура.Ширина AS Ширина,
+    Номенклатура.ТНВЭДСсылка as ТНВЭДСсылка,
+    Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка
+INTO #Temp_GoodsBegin
+From
+	#Temp_GoodsRawParsed T1
+	Inner Join #Temp_GoodsPackages Номенклатура With (NOLOCK) 
+		ON T1.code is NULL and T1.Article = Номенклатура.article
+	Left Join #Temp_PickupPoints  
+		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
+
+union all
+
+Select 
+	Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
+	Номенклатура.code AS code,
+	Номенклатура.article AS article,
+	Номенклатура.ЕдиницаИзмерения AS ЕдиницаИзмерения,
+	Номенклатура.Габариты AS Габариты,
+    T1.quantity AS Количество,
+	#Temp_PickupPoints.СкладСсылка,
+	Номенклатура.УпаковкаСсылка AS УпаковкаСсылка,
+	Номенклатура.Вес AS Вес,
+	Номенклатура.Объем AS Объем,
+	Номенклатура.Высота AS Высота,
+	Номенклатура.Глубина AS Глубина,
+	Номенклатура.Ширина AS Ширина,
+    Номенклатура.ТНВЭДСсылка as ТНВЭДСсылка,
+    Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка
+From 
+	#Temp_GoodsRawParsed T1
+	Inner Join #Temp_GoodsPackages Номенклатура With (NOLOCK) 
+		ON T1.code is not NULL and T1.code = Номенклатура.code
+	Left Join #Temp_PickupPoints  
+		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 
