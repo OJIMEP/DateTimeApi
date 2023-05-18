@@ -220,82 +220,90 @@ Where
 	Номенклатура.СкладПВЗСсылка IS NULL
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
-With Temp_ExchangeRates AS (
-SELECT
-	T1._Period AS Период,
-	T1._Fld14558RRef AS Валюта,
-	T1._Fld14559 AS Курс,
-	T1._Fld14560 AS Кратность
-FROM _InfoRgSL26678 T1 With (NOLOCK)
-	)
-SELECT
-    T2._Fld21408RRef AS НоменклатураСсылка,
-    T2._Fld21410_TYPE AS Источник_TYPE,
-	T2._Fld21410_RTRef AS Источник_RTRef,
-	T2._Fld21410_RRRef AS Источник_RRRef,
+Select 
+	ЦеныТолькоПрайсы._Fld21408RRef AS Номенклатура,
 	ЦеныТолькоПрайсы._Fld21410_TYPE AS Регистратор_TYPE,
     ЦеныТолькоПрайсы._Fld21410_RTRef AS Регистратор_RTRef,
-    ЦеныТолькоПрайсы._Fld21410_RRRef AS Регистратор_RRRef,
-    T2._Fld23568RRef AS СкладИсточника,
-    T2._Fld21424 AS ДатаСобытия,
-	Цены._Fld21442 * ExchangeRates.Курс / ExchangeRates.Кратность AS Цена,
-    SUM(T2._Fld21411) - SUM(T2._Fld21412) AS Количество
-Into #Temp_Remains
-FROM
-    dbo._AccumRgT21444 T2 With (READCOMMITTED)
-	Left Join _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
-		Inner Join Temp_ExchangeRates With (NOLOCK)
-			On ЦеныТолькоПрайсы._Fld21443RRef = Temp_ExchangeRates.Валюта 
-		On T2._Fld21408RRef = ЦеныТолькоПрайсы._Fld21408RRef
-		AND T2._Fld21410_RTRef = 0x00000153
-		AND ЦеныТолькоПрайсы._Fld21410_RTRef = 0x00000153  --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса
-		AND T2._Fld21410_RRRef = ЦеныТолькоПрайсы._Fld21410_RRRef
-        And (ЦеныТолькоПрайсы._Fld21982<>0 
-		AND ЦеныТолькоПрайсы._Fld21442 * Temp_ExchangeRates.Курс / Temp_ExchangeRates.Кратность >= ЦеныТолькоПрайсы._Fld21982 OR ЦеныТолькоПрайсы._Fld21411 >= ЦеныТолькоПрайсы._Fld21616)
+    ЦеныТолькоПрайсы._Fld21410_RRRef AS Регистратор_RRRef
+Into #Temp_Megaprices
+From _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
+	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
+		ON ЦеныТолькоПрайсы._Fld21443RRef = ExchangeRates._Fld14558RRef
+		AND ЦеныТолькоПрайсы._Fld21410_RTRef = 0x00000153 --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса
+		AND (ЦеныТолькоПрайсы._Fld21982 <> 0 
+			AND ЦеныТолькоПрайсы._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 >= ЦеныТолькоПрайсы._Fld21982 OR ЦеныТолькоПрайсы._Fld21411 >= ЦеныТолькоПрайсы._Fld21616)
 		And ЦеныТолькоПрайсы._Fld21408RRef IN(SELECT
                 НоменклатураСсылка
             FROM
-                #Temp_Goods)
-	Left Join _AccumRg21407 Цены With (READCOMMITTED)
-		Inner Join Temp_ExchangeRates ExchangeRates With (NOLOCK)
-			On Цены._Fld21443RRef = ExchangeRates.Валюта 
-		On T2._Fld21408RRef = Цены._Fld21408RRef
-		AND T2._Fld21410_RTRef IN(0x00000141,0x00000153)
-		AND Цены._Fld21410_RTRef IN(0x00000141,0x00000153)  --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса, ЗаказПоставщику
-		AND T2._Fld21410_RRRef = Цены._Fld21410_RRRef
-        And (Цены._Fld21982<>0 
-		AND Цены._Fld21410_RTRef = 0x00000141 OR (Цены._Fld21442 * ExchangeRates.Курс / ExchangeRates.Кратность >= Цены._Fld21982 OR Цены._Fld21411 >= Цены._Fld21616))
-		And Цены._Fld21408RRef IN(SELECT
+                #Temp_GoodsPackages)
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+				
+Select 
+	Цены._Fld21408RRef AS Номенклатура,
+	Цены._Fld21410_RRRef AS РегистраторЦен_RRRef,
+	Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 AS Цена
+Into #Temp_Prices
+From _AccumRg21407 Цены With (READCOMMITTED)
+	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
+		ON Цены._Fld21443RRef = ExchangeRates._Fld14558RRef
+		AND Цены._Fld21410_RTRef IN(0x00000141,0x00000153)  --Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса, ЗаказПоставщику
+		AND (Цены._Fld21982 <> 0 
+			AND Цены._Fld21410_RTRef = 0x00000141 OR (Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 >= Цены._Fld21982 OR Цены._Fld21411 >= Цены._Fld21616))
+		AND Цены._Fld21408RRef IN(SELECT
                 НоменклатураСсылка
             FROM
-                #Temp_Goods)
-WHERE
-    T2._Period = '5999-11-01 00:00:00'
-    AND (
-        (
-            (T2._Fld21424 = '2001-01-01 00:00:00')
-            OR (Cast(T2._Fld21424 AS datetime)>= @P_DateTimeNow)
-        )
-        AND T2._Fld21408RRef IN (
-            SELECT
-                TNomen.НоменклатураСсылка
-            FROM
-                #Temp_Goods TNomen WITH(NOLOCK))) AND (T2._Fld21412 <> 0 OR T2._Fld21411 <> 0)
+                #Temp_GoodsPackages)
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
+WITH FilteredGoods AS (
+    SELECT
+        TNomen.НоменклатураСсылка
+    FROM
+        #Temp_GoodsPackages TNomen WITH(NOLOCK)
+)
+SELECT
+    T2._Fld21408RRef AS НоменклатураСсылка,
+    T2._Fld21410_TYPE AS Источник_TYPE,
+    T2._Fld21410_RTRef AS Источник_RTRef,
+    T2._Fld21410_RRRef AS Источник_RRRef,
+    #Temp_Megaprices.Регистратор_TYPE AS Регистратор_TYPE,
+    #Temp_Megaprices.Регистратор_RTRef AS Регистратор_RTRef,
+    #Temp_Megaprices.Регистратор_RRRef AS Регистратор_RRRef,
+    T2._Fld23568RRef AS СкладИсточника,
+    T2._Fld21424 AS ДатаСобытия,
+    #Temp_Prices.Цена AS Цена,
+    SUM(T2._Fld21411) - SUM(T2._Fld21412) AS Количество
+Into #Temp_Remains
+FROM
+    dbo._AccumRgT21444 T2 WITH (READCOMMITTED)
+	INNER JOIN FilteredGoods FG 
+	ON T2._Fld21408RRef = FG.НоменклатураСсылка
+		AND T2._Period = '5999-11-01 00:00:00'
+		AND (T2._Fld21424 = '2001-01-01 00:00:00'
+			OR (T2._Fld21424 >= @P_DateTimeNow))
+		AND (T2._Fld21412 <> 0 OR T2._Fld21411 <> 0)
+	LEFT JOIN #Temp_Megaprices
+	ON T2._Fld21408RRef = #Temp_Megaprices.Номенклатура
+	AND T2._Fld21410_RRRef = #Temp_Megaprices.Регистратор_RRRef
+    LEFT JOIN #Temp_Prices
+	ON T2._Fld21408RRef = #Temp_Prices.Номенклатура
+	AND T2._Fld21410_RRRef = #Temp_Prices.РегистраторЦен_RRRef
+	
 GROUP BY
     T2._Fld21408RRef,
     T2._Fld21410_TYPE,
     T2._Fld21410_RTRef,
     T2._Fld21410_RRRef,
-	ЦеныТолькоПрайсы._Fld21410_TYPE,
-	ЦеныТолькоПрайсы._Fld21410_RTRef,
-	ЦеныТолькоПрайсы._Fld21410_RRRef,
+    #Temp_Megaprices.Регистратор_TYPE,
+	#Temp_Megaprices.Регистратор_RTRef,
+	#Temp_Megaprices.Регистратор_RRRef,
     T2._Fld23568RRef,
     T2._Fld21424,
-	Цены._Fld21442 * ExchangeRates.Курс / ExchangeRates.Кратность
+	#Temp_Prices.Цена
 HAVING
     (SUM(T2._Fld21412) <> 0.0
     OR SUM(T2._Fld21411) <> 0.0)
-	AND SUM(T2._Fld21411) - SUM(T2._Fld21412) > 0.0
+    AND SUM(T2._Fld21411) - SUM(T2._Fld21412) > 0.0
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimeNow='{1}'),KEEP PLAN, KEEPFIXED PLAN);
 
 SELECT Distinct

@@ -75,7 +75,8 @@ namespace DateTimeService.Api
                 {
                     OnAuthenticationFailed = c =>
                     {
-                        Log.Error(c.Exception, "Ошибка авторизации");
+                        var token = c.Request.Headers.Authorization.ToString();
+                        Log.Error(c.Exception, "Ошибка авторизации: {token}", token);
                         return Task.CompletedTask;
                     }
 
