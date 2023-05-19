@@ -70,12 +70,12 @@ public partial class EnvelopeBody
 [System.Xml.Serialization.XmlRootAttribute(Namespace = "http://ws.vrptwserver.beltranssat.by/", IsNullable = false)]
 public partial class getZoneByCoordsResponse
 {
-
-    private getZoneByCoordsResponseZone zoneField;
+    #nullable enable
+    private getZoneByCoordsResponseZone? zoneField;
 
     /// <remarks/>
     [System.Xml.Serialization.XmlElementAttribute(Form = System.Xml.Schema.XmlSchemaForm.Unqualified)]
-    public getZoneByCoordsResponseZone zone
+    public getZoneByCoordsResponseZone? zone
     {
         get
         {

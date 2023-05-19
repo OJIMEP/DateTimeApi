@@ -157,7 +157,7 @@ namespace DateTimeService.Application.Repositories
                     using var responseStream = await response.Content.ReadAsStreamAsync();
                     var xml = new XmlSerializer(typeof(Envelope));
                     var responseData = (Envelope)xml.Deserialize(responseStream);
-                    result = responseData.Items[0].getZoneByCoordsResponse.zone.id;
+                    result = responseData.Items[0].getZoneByCoordsResponse.zone?.id ?? "";
                 }
                 else
                 {
