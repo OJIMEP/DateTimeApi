@@ -281,20 +281,20 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             };
             searchrequest.Query.Bool.Filter.Add(element);
 
-            element = new()
-            {
-                Term = new()
-                {
-                    { "server_host", new { value = serverIP } }
-                }
-            };
-            searchrequest.Query.Bool.Filter.Add(element);
+            //element = new()
+            //{
+            //    Term = new()
+            //    {
+            //        { "server_host", new { value = serverIP } }
+            //    }
+            //};
+            //searchrequest.Query.Bool.Filter.Add(element);
 
             element = new()
             {
                 Term = new()
                 {
-                    { "msg.DatabaseConnection", new { value = connectionWithOutCredentials } }
+                    { "Message.DatabaseConnection", new { value = connectionWithOutCredentials } }
                 }
             };
             searchrequest.Query.Bool.Filter.Add(element);
@@ -303,7 +303,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             {
                 Terms = new()
                 {
-                    Field = "msg.DatabaseConnection",
+                    Field = "Message.DatabaseConnection",
                     Size = 5
                 },
 
@@ -314,7 +314,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             {
                 Percentiles = new()
                 {
-                    Field = "msg.TimeFullExecution",
+                    Field = "Message.TimeFullExecution",
                     Percents = new double[] { 95, 99, 99.5 }
                 }
             };
@@ -325,7 +325,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             {
                 Avg = new()
                 {
-                    Field = "msg.LoadBalancingExecution"
+                    Field = "Message.TimeDatabaseConnection"
                 }
             };
             rootAgg.Aggregations.Add("load_bal", loadBal);
@@ -334,7 +334,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             {
                 Avg = new()
                 {
-                    Field = "msg.TimeFullExecution"
+                    Field = "Message.TimeFullExecution"
                 }
             };
             rootAgg.Aggregations.Add("week_avg", average);
@@ -430,7 +430,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                 Percentile95Time = responseBucket.TimePercentile.Values.GetValueOrDefault("95.0")
             };
 
-            if (databaseStats.LoadBalanceTime == default || databaseStats.AverageTime == default || databaseStats.Percentile95Time == default)
+            if (databaseStats.AverageTime == default || databaseStats.Percentile95Time == default)
             {
                 if (_productionEnv)
                 {

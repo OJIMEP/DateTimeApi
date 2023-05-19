@@ -1419,82 +1419,90 @@ Where
 	Номенклатура.СкладПВЗСсылка IS NULL
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
-With Temp_ExchangeRates AS (
-SELECT
-	T1._Period AS Период,
-	T1._Fld14558RRef AS Валюта,
-	T1._Fld14559 AS Курс,
-	T1._Fld14560 AS Кратность
-FROM _InfoRgSL26678 T1 With (NOLOCK)
-	)
-SELECT
-    T2._Fld21408RRef AS НоменклатураСсылка,
-    T2._Fld21410_TYPE AS Источник_TYPE,
-	T2._Fld21410_RTRef AS Источник_RTRef,
-	T2._Fld21410_RRRef AS Источник_RRRef,
+Select 
+	ЦеныТолькоПрайсы._Fld21408RRef AS Номенклатура,
 	ЦеныТолькоПрайсы._Fld21410_TYPE AS Регистратор_TYPE,
     ЦеныТолькоПрайсы._Fld21410_RTRef AS Регистратор_RTRef,
-    ЦеныТолькоПрайсы._Fld21410_RRRef AS Регистратор_RRRef,
-    T2._Fld23568RRef AS СкладИсточника,
-    T2._Fld21424 AS ДатаСобытия,
-	Цены._Fld21442 * ExchangeRates.Курс / ExchangeRates.Кратность AS Цена,
-    SUM(T2._Fld21411) - SUM(T2._Fld21412) AS Количество
-Into #Temp_Remains
-FROM
-    dbo._AccumRgT21444 T2 With (READCOMMITTED)
-	Left Join _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
-		Inner Join Temp_ExchangeRates With (NOLOCK)
-			On ЦеныТолькоПрайсы._Fld21443RRef = Temp_ExchangeRates.Валюта 
-		On T2._Fld21408RRef = ЦеныТолькоПрайсы._Fld21408RRef
-		AND T2._Fld21410_RTRef = 0x00000153
-		AND ЦеныТолькоПрайсы._Fld21410_RTRef = 0x00000153  --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса
-		AND T2._Fld21410_RRRef = ЦеныТолькоПрайсы._Fld21410_RRRef
-        And (ЦеныТолькоПрайсы._Fld21982<>0 
-		AND ЦеныТолькоПрайсы._Fld21442 * Temp_ExchangeRates.Курс / Temp_ExchangeRates.Кратность >= ЦеныТолькоПрайсы._Fld21982 OR ЦеныТолькоПрайсы._Fld21411 >= ЦеныТолькоПрайсы._Fld21616)
+    ЦеныТолькоПрайсы._Fld21410_RRRef AS Регистратор_RRRef
+Into #Temp_Megaprices
+From _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
+	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
+		ON ЦеныТолькоПрайсы._Fld21443RRef = ExchangeRates._Fld14558RRef
+		AND ЦеныТолькоПрайсы._Fld21410_RTRef = 0x00000153 --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса
+		AND (ЦеныТолькоПрайсы._Fld21982 <> 0 
+			AND ЦеныТолькоПрайсы._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 >= ЦеныТолькоПрайсы._Fld21982 OR ЦеныТолькоПрайсы._Fld21411 >= ЦеныТолькоПрайсы._Fld21616)
 		And ЦеныТолькоПрайсы._Fld21408RRef IN(SELECT
                 НоменклатураСсылка
             FROM
-                #Temp_Goods)
-	Left Join _AccumRg21407 Цены With (READCOMMITTED)
-		Inner Join Temp_ExchangeRates ExchangeRates With (NOLOCK)
-			On Цены._Fld21443RRef = ExchangeRates.Валюта 
-		On T2._Fld21408RRef = Цены._Fld21408RRef
-		AND T2._Fld21410_RTRef IN(0x00000141,0x00000153)
-		AND Цены._Fld21410_RTRef IN(0x00000141,0x00000153)  --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса, ЗаказПоставщику
-		AND T2._Fld21410_RRRef = Цены._Fld21410_RRRef
-        And (Цены._Fld21982<>0 
-		AND Цены._Fld21410_RTRef = 0x00000141 OR (Цены._Fld21442 * ExchangeRates.Курс / ExchangeRates.Кратность >= Цены._Fld21982 OR Цены._Fld21411 >= Цены._Fld21616))
-		And Цены._Fld21408RRef IN(SELECT
+                #Temp_GoodsPackages)
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+				
+Select 
+	Цены._Fld21408RRef AS Номенклатура,
+	Цены._Fld21410_RRRef AS РегистраторЦен_RRRef,
+	Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 AS Цена
+Into #Temp_Prices
+From _AccumRg21407 Цены With (READCOMMITTED)
+	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
+		ON Цены._Fld21443RRef = ExchangeRates._Fld14558RRef
+		AND Цены._Fld21410_RTRef IN(0x00000141,0x00000153)  --Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса, ЗаказПоставщику
+		AND (Цены._Fld21982 <> 0 
+			AND Цены._Fld21410_RTRef = 0x00000141 OR (Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 >= Цены._Fld21982 OR Цены._Fld21411 >= Цены._Fld21616))
+		AND Цены._Fld21408RRef IN(SELECT
                 НоменклатураСсылка
             FROM
-                #Temp_Goods)
-WHERE
-    T2._Period = '5999-11-01 00:00:00'
-    AND (
-        (
-            (T2._Fld21424 = '2001-01-01 00:00:00')
-            OR (Cast(T2._Fld21424 AS datetime)>= @P_DateTimeNow)
-        )
-        AND T2._Fld21408RRef IN (
-            SELECT
-                TNomen.НоменклатураСсылка
-            FROM
-                #Temp_Goods TNomen WITH(NOLOCK))) AND (T2._Fld21412 <> 0 OR T2._Fld21411 <> 0)
+                #Temp_GoodsPackages)
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
+WITH FilteredGoods AS (
+    SELECT
+        TNomen.НоменклатураСсылка
+    FROM
+        #Temp_GoodsPackages TNomen WITH(NOLOCK)
+)
+SELECT
+    T2._Fld21408RRef AS НоменклатураСсылка,
+    T2._Fld21410_TYPE AS Источник_TYPE,
+    T2._Fld21410_RTRef AS Источник_RTRef,
+    T2._Fld21410_RRRef AS Источник_RRRef,
+    #Temp_Megaprices.Регистратор_TYPE AS Регистратор_TYPE,
+    #Temp_Megaprices.Регистратор_RTRef AS Регистратор_RTRef,
+    #Temp_Megaprices.Регистратор_RRRef AS Регистратор_RRRef,
+    T2._Fld23568RRef AS СкладИсточника,
+    T2._Fld21424 AS ДатаСобытия,
+    #Temp_Prices.Цена AS Цена,
+    SUM(T2._Fld21411) - SUM(T2._Fld21412) AS Количество
+Into #Temp_Remains
+FROM
+    dbo._AccumRgT21444 T2 WITH (READCOMMITTED)
+	INNER JOIN FilteredGoods FG 
+	ON T2._Fld21408RRef = FG.НоменклатураСсылка
+		AND T2._Period = '5999-11-01 00:00:00'
+		AND (T2._Fld21424 = '2001-01-01 00:00:00'
+			OR (T2._Fld21424 >= @P_DateTimeNow))
+		AND (T2._Fld21412 <> 0 OR T2._Fld21411 <> 0)
+	LEFT JOIN #Temp_Megaprices
+	ON T2._Fld21408RRef = #Temp_Megaprices.Номенклатура
+	AND T2._Fld21410_RRRef = #Temp_Megaprices.Регистратор_RRRef
+    LEFT JOIN #Temp_Prices
+	ON T2._Fld21408RRef = #Temp_Prices.Номенклатура
+	AND T2._Fld21410_RRRef = #Temp_Prices.РегистраторЦен_RRRef
+	
 GROUP BY
     T2._Fld21408RRef,
     T2._Fld21410_TYPE,
     T2._Fld21410_RTRef,
     T2._Fld21410_RRRef,
-	ЦеныТолькоПрайсы._Fld21410_TYPE,
-	ЦеныТолькоПрайсы._Fld21410_RTRef,
-	ЦеныТолькоПрайсы._Fld21410_RRRef,
+    #Temp_Megaprices.Регистратор_TYPE,
+	#Temp_Megaprices.Регистратор_RTRef,
+	#Temp_Megaprices.Регистратор_RRRef,
     T2._Fld23568RRef,
     T2._Fld21424,
-	Цены._Fld21442 * ExchangeRates.Курс / ExchangeRates.Кратность
+	#Temp_Prices.Цена
 HAVING
     (SUM(T2._Fld21412) <> 0.0
     OR SUM(T2._Fld21411) <> 0.0)
-	AND SUM(T2._Fld21411) - SUM(T2._Fld21412) > 0.0
+    AND SUM(T2._Fld21411) - SUM(T2._Fld21412) > 0.0
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimeNow='{1}'),KEEP PLAN, KEEPFIXED PLAN);
 
 SELECT Distinct
@@ -1628,22 +1636,21 @@ Group By
 Having 
     min(Case when 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1;
 
-With TempSourcesGrouped AS
-(
 Select
 	T1.НоменклатураСсылка AS НоменклатураСсылка,
 	Sum(T1.Количество) AS Количество,
 	T1.ЭтоСклад,
 	T1.ДатаДоступности AS ДатаДоступности,
 	T1.СкладНазначения AS СкладНазначения
+Into #Temp_SourcesGrouped2
 From
 	#Temp_Sources T1	
 Group by
 	T1.НоменклатураСсылка,
 	T1.ЭтоСклад,
 	T1.ДатаДоступности,
-	T1.СкладНазначения
-)
+	T1.СкладНазначения;
+
 Select
 	Источники1.НоменклатураСсылка AS Номенклатура,
 	Источники1.СкладНазначения AS СкладНазначения,
@@ -1651,8 +1658,8 @@ Select
 	Sum(Источник2.Количество) AS Количество
 Into #Temp_AvailableGoods
 From
-	TempSourcesGrouped AS Источники1
-		Left Join TempSourcesGrouped AS Источник2
+	#Temp_SourcesGrouped2 AS Источники1
+		Left Join #Temp_SourcesGrouped2 AS Источник2
 		On Источники1.НоменклатураСсылка = Источник2.НоменклатураСсылка
 		AND Источники1.СкладНазначения = Источник2.СкладНазначения
 			AND Источники1.ДатаДоступности >= Источник2.ДатаДоступности
@@ -1679,8 +1686,8 @@ Select
 	Источники1.ДатаДоступности AS ДатаДоступности,
 	Sum(Источник2.Количество) AS Количество
 From
-	TempSourcesGrouped AS Источники1
-		Left Join TempSourcesGrouped AS Источник2
+	#Temp_SourcesGrouped2 AS Источники1
+		Left Join #Temp_SourcesGrouped2 AS Источник2
 		On Источники1.НоменклатураСсылка = Источник2.НоменклатураСсылка
 		AND Источники1.СкладНазначения = Источник2.СкладНазначения
 			AND Источники1.ДатаДоступности >= Источник2.ДатаДоступности	
@@ -1766,115 +1773,12 @@ SELECT
 Group by T4.НоменклатураСсылка, T4.СкладНазначения
 OPTION (HASH GROUP, KEEP PLAN, KEEPFIXED PLAN);
 
-
-With Temp_SourcesCorrectedDate AS
-(
-SELECT
-    T1.НоменклатураСсылка,
-    T1.СкладНазначения,
-    Min(ISNULL(T2.ДатаДоступности1, T1.ДатаДоступности)) AS ДатаДоступности
-FROM
-    #Temp_Sources T1 WITH(NOLOCK)
-    LEFT OUTER JOIN #Temp_BestPriceAfterClosestDate T2 WITH(NOLOCK)
-    ON (T1.НоменклатураСсылка = T2.НоменклатураСсылка)
-    AND (T1.ДатаДоступности = T2.ДатаДоступности)
-    AND (T1.СкладНазначения = T2.СкладНазначения)
-    AND (T1.ТипИсточника = 3)
-GROUP BY
-	T1.НоменклатураСсылка,
-	T1.СкладНазначения
-)
-SELECT
-    T1.НоменклатураСсылка,
-	T1.article,
-	T1.code,
-    ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения,
-    MIN(ISNULL(T3.ДатаДоступности, T2.ДатаДоступности)) AS БлижайшаяДата,
-    T1.Количество AS Количество,
-    T1.Вес,
-    T1.Объем,
-    T1.ТНВЭДСсылка,
-    T1.ТоварнаяКатегорияСсылка,
-    T1.ВремяНаОбслуживание,
-    T1.ГруппаПланирования,
-	T1.ГруппаПланированияДобавляемоеВремя,
-    T1.Приоритет,
-	0 AS PickUp
-into #Temp_ClosestDatesByGoodsWithoutShifting
-FROM
-    #Temp_Goods T1 WITH(NOLOCK)	
-    LEFT JOIN Temp_SourcesCorrectedDate T2 WITH(NOLOCK)
-		LEFT JOIN  #Temp_T3 T3 ON (T2.НоменклатураСсылка = T3.НоменклатураСсылка) 
-			And T2.СкладНазначения = T3.СкладНазначения
-    ON (T1.НоменклатураСсылка = T2.НоменклатураСсылка) 
-		AND ISNULL(T3.СкладНазначения, T2.СкладНазначения) IN (Select СкладСсылка From #Temp_GeoData) 
-Where 
-	T1.СкладСсылка IS NULL
-    And T1.ГруппаПланированияСклад = ISNULL(T3.СкладНазначения, T2.СкладНазначения)
-    AND T1.Количество = 1
-GROUP BY
-    T1.НоменклатураСсылка,
-	T1.article,
-	T1.code,
-	ISNULL(T3.СкладНазначения, T2.СкладНазначения),
-    T1.Вес,
-    T1.Объем,
-    T1.ТНВЭДСсылка,
-    T1.ТоварнаяКатегорияСсылка,
-    T1.ВремяНаОбслуживание,
-    T1.Количество,
-    T1.ГруппаПланирования,
-	T1.ГруппаПланированияДобавляемоеВремя,
-	T1.Приоритет
-UNION ALL
-SELECT
-    T1.НоменклатураСсылка,
-	T1.article,
-	T1.code,
-    ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения,
-    MIN(ISNULL(T3.ДатаДоступности, T2.ДатаДоступности)) AS БлижайшаяДата,
-    T1.Количество AS Количество,
-    T1.Вес,
-    T1.Объем,
-    T1.ТНВЭДСсылка,
-    T1.ТоварнаяКатегорияСсылка,
-    T1.ВремяНаОбслуживание,
-    T1.ГруппаПланирования,
-	T1.ГруппаПланированияДобавляемоеВремя,
-    T1.Приоритет,
-	1 AS PickUp
-FROM
-    #Temp_Goods T1 WITH(NOLOCK)	
-    LEFT JOIN Temp_SourcesCorrectedDate T2 WITH(NOLOCK)
-		LEFT JOIN  #Temp_T3 T3 ON (T2.НоменклатураСсылка = T3.НоменклатураСсылка) 
-			And T2.СкладНазначения = T3.СкладНазначения
-    ON (T1.НоменклатураСсылка = T2.НоменклатураСсылка) 
-		AND T1.СкладСсылка = ISNULL(T3.СкладНазначения, T2.СкладНазначения)
-Where 
-	NOT T1.СкладСсылка IS NULL
-    AND T1.Количество = 1
-GROUP BY
-    T1.НоменклатураСсылка,
-	T1.article,
-	T1.code,
-	ISNULL(T3.СкладНазначения, T2.СкладНазначения),
-    T1.Вес,
-    T1.Объем,
-    T1.ТНВЭДСсылка,
-    T1.ТоварнаяКатегорияСсылка,
-    T1.ВремяНаОбслуживание,
-    T1.Количество,
-    T1.ГруппаПланирования,
-	T1.ГруппаПланированияДобавляемоеВремя,
-	T1.Приоритет
-UNION ALL
-
 SELECT
     T1.НоменклатураСсылка,
 	T1.article,
 	T1.code,
     #Temp_AvailableGoods.СкладНазначения AS СкладНазначения,
-    Min(#Temp_AvailableGoods.ДатаДоступности) AS БлижайшаяДата,
+    #Temp_AvailableGoods.ДатаДоступности AS БлижайшаяДата,
     T1.Количество AS Количество,
     T1.Вес,
     T1.Объем,
@@ -1885,6 +1789,7 @@ SELECT
 	T1.ГруппаПланированияДобавляемоеВремя,
 	T1.Приоритет,
 	0 AS PickUp
+into #Temp_ClosestDatesByGoodsWithoutShiftingUngrupped
 FROM
     #Temp_Goods T1 WITH(NOLOCK)	
    Left Join #Temp_AvailableGoods With (NOLOCK) 
@@ -1894,28 +1799,14 @@ FROM
 Where 
 	T1.СкладСсылка IS NULL
 	And T1.ГруппаПланированияСклад = #Temp_AvailableGoods.СкладНазначения 
-	AND T1.Количество > 1
-GROUP BY
-    T1.НоменклатураСсылка,
-	T1.article,
-	T1.code,
-	#Temp_AvailableGoods.СкладНазначения,
-    T1.Вес,
-    T1.Объем,
-    T1.ТНВЭДСсылка,
-    T1.ТоварнаяКатегорияСсылка,
-    T1.ВремяНаОбслуживание,
-    T1.Количество,
-    T1.ГруппаПланирования,
-	T1.ГруппаПланированияДобавляемоеВремя,
-	T1.Приоритет
+
 UNION ALL
 SELECT
     T1.НоменклатураСсылка,
 	T1.article,
 	T1.code,
     #Temp_AvailableGoods.СкладНазначения AS СкладНазначения,
-    Min(#Temp_AvailableGoods.ДатаДоступности) AS БлижайшаяДата,
+    #Temp_AvailableGoods.ДатаДоступности AS БлижайшаяДата,
     T1.Количество AS Количество,
     T1.Вес,
     T1.Объем,
@@ -1933,13 +1824,33 @@ FROM
 		AND T1.Количество <= #Temp_AvailableGoods.Количество
 		AND	T1.СкладСсылка = #Temp_AvailableGoods.СкладНазначения
 Where 
-	NOT T1.СкладСсылка IS NULL
-	AND T1.Количество > 1
+	T1.СкладСсылка IS NOT NULL
+OPTION (HASH GROUP, KEEP PLAN, KEEPFIXED PLAN);
+
+SELECT
+    T1.НоменклатураСсылка,
+	T1.article,
+	T1.code,
+    T1.СкладНазначения AS СкладНазначения,
+    Min(T1.БлижайшаяДата) AS БлижайшаяДата,
+    T1.Количество AS Количество,
+    T1.Вес,
+    T1.Объем,
+    T1.ТНВЭДСсылка,
+    T1.ТоварнаяКатегорияСсылка,
+    T1.ВремяНаОбслуживание,
+    T1.ГруппаПланирования,
+	T1.ГруппаПланированияДобавляемоеВремя,
+	T1.Приоритет,
+	1 AS PickUp
+into #Temp_ClosestDatesByGoodsWithoutShifting
+FROM
+	 #Temp_ClosestDatesByGoodsWithoutShiftingUngrupped T1 WITH(NOLOCK)	
 GROUP BY
     T1.НоменклатураСсылка,
 	T1.article,
 	T1.code,
-	#Temp_AvailableGoods.СкладНазначения,
+	T1.СкладНазначения,
     T1.Вес,
     T1.Объем,
     T1.ТНВЭДСсылка,
