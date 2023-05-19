@@ -83,6 +83,11 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
         private async Task CheckAndUpdatePerfomance(DatabaseInfo databaseInfo, DateTimeOffset lastFreeProcCacheCommand, int timeCriteriaFailCount, bool clearCacheAllowed, CancellationToken token)
         {
+            if (databaseInfo.Priority == 0)
+            {
+                return;
+            }
+
             var stats = await _databaseCheckService.GetElasticLogsInformationAsync(databaseInfo.ConnectionWithoutCredentials, token);
             if (stats != null)
             {
