@@ -1,5 +1,6 @@
 ﻿using DateTimeService.Api;
 using DateTimeService.Application.Logging;
+using DateTimeService.Application.Queries;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

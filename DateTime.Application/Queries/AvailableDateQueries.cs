@@ -1842,7 +1842,7 @@ SELECT
     T1.ГруппаПланирования,
 	T1.ГруппаПланированияДобавляемоеВремя,
 	T1.Приоритет,
-	1 AS PickUp
+	T1.PickUp
 into #Temp_ClosestDatesByGoodsWithoutShifting
 FROM
 	 #Temp_ClosestDatesByGoodsWithoutShiftingUngrupped T1 WITH(NOLOCK)	
@@ -1859,7 +1859,8 @@ GROUP BY
     T1.Количество,
     T1.ГруппаПланирования,
 	T1.ГруппаПланированияДобавляемоеВремя,
-	T1.Приоритет
+	T1.Приоритет,
+    T1.PickUp
 OPTION (HASH GROUP, KEEP PLAN, KEEPFIXED PLAN);
 
 SELECT

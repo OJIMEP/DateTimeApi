@@ -1,6 +1,7 @@
 ﻿using DateTimeService.Api;
 using DateTimeService.Application.Database.DatabaseManagement;
 using DateTimeService.Application.Logging;
+using DateTimeService.Application.Queries;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
