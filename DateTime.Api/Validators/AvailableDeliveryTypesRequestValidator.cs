@@ -11,10 +11,6 @@ namespace DateTimeService.Api.Validators
                 .NotEmpty()
                 .WithMessage("Должен быть указан код города");
 
-            RuleFor(x => x.PickupPoints)
-                .NotEmpty()
-                .WithMessage("Должен быть указан хоть один пункт самовывоза");
-
             RuleFor(x => x.OrderItems)
                 .NotEmpty()
                 .WithMessage("Должен быть указан хоть один товар");

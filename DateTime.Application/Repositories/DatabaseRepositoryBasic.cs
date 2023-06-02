@@ -192,6 +192,15 @@ namespace DateTimeService.Application.Repositories
 
         public async Task<DeliveryTypeAvailabilityResult> GetDeliveryTypeAvailability(AvailableDeliveryTypesQuery query, string deliveryType, CancellationToken token = default)
         {
+            if (deliveryType == Constants.Self && !query.PickupPoints.Any())
+            {
+                return new DeliveryTypeAvailabilityResult
+                {
+                    deliveryType = deliveryType,
+                    available = false
+                };
+            }
+
             bool deliveryTypeAvailable;
             long elapsedMs;
 
@@ -421,7 +430,7 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_IsDelivery", deliveryType == Constants.Self ? 0 : 1);
             cmd.Parameters.AddWithValue("@P_IsPickup", deliveryType == Constants.Self ? 1 : 0);
 
-            string pickupPointsString = string.Join(", ", query.PickupPoints
+            string pickupPointsString = !query.PickupPoints.Any() ? "''" : string.Join(", ", query.PickupPoints
                 .Select((value, index) =>
                 {
                     string parameterName = $"@PickupPoint{index}";
