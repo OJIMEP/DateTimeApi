@@ -677,35 +677,6 @@ With TempSourcesGrouped AS
 (
 Select
 	T1.НоменклатураСсылка As НоменклатураСсылка,
-    Min(Case When T1.ЭтоСклад = 1 Then T1.ДатаДоступности Else @P_MaxDate End) As ДатаДоступностиСклад,
-	Sum(Case When T1.ЭтоСклад = 1 Then T1.Количество Else 0 End) As ОстатокНаСкладе,
-	Sum(T1.Количество) As ОстатокВсего
-From
-	#Temp_Sources T1
-Group By
-	T1.НоменклатураСсылка
-)
-Select
-	T1.НоменклатураСсылка,
-	isNull(T2.ДатаДоступностиСклад, @P_MaxDate) As ДатаДоступностиСклад,
-	min(Case When T1.Количество <= isNull(T2.ОстатокВсего, 0) Then 1 Else 0 End) As ОстаткаДостаточно,
-	min(Case When T1.Количество <= isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) As ОстаткаНаСкладеДостаточно,
-	min(Case When isNull(T2.ОстатокНаСкладе, 0) > 0 Then 1 Else 0 End) As ОстатокЕсть
-Into #Temp_StockSourcesAvailable
-From #Temp_Goods T1
-	Left Join TempSourcesGrouped T2
-	On T1.НоменклатураСсылка = T2.НоменклатураСсылка
-Where @P_StockPriority = 1
-Group By
-    isNull(T2.ДатаДоступностиСклад, @P_MaxDate),
-    T1.НоменклатураСсылка
-Having 
-    min(Case When 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1;
-
-With TempSourcesGrouped AS
-(
-Select
-	T1.НоменклатураСсылка As НоменклатураСсылка,
 	T1.ЭтоСклад,
 	Sum(T1.Количество) As Количество,
 	T1.ДатаДоступности As ДатаДоступности,
@@ -729,39 +700,7 @@ From
 		Left Join TempSourcesGrouped As Источник2
 		On Источники1.НоменклатураСсылка = Источник2.НоменклатураСсылка
 		And Источники1.СкладНазначения = Источник2.СкладНазначения
-			And Источники1.ДатаДоступности >= Источник2.ДатаДоступности
-        Inner Join #Temp_StockSourcesAvailable
-		on @P_StockPriority = 1
-			And Источники1.НоменклатураСсылка = #Temp_StockSourcesAvailable.НоменклатураСсылка
-			And ((Источники1.ЭтоСклад = 1
-				And #Temp_StockSourcesAvailable.ОстатокЕсть = 1
-				And #Temp_StockSourcesAvailable.ОстаткаДостаточно = 1)
-			OR (Источники1.ЭтоСклад = 0
-				And #Temp_StockSourcesAvailable.ОстаткаДостаточно = 1
-				And #Temp_StockSourcesAvailable.ОстаткаНаСкладеДостаточно = 0
-				And Источники1.ДатаДоступности >= #Temp_StockSourcesAvailable.ДатаДоступностиСклад))
-Group By
-	Источники1.НоменклатураСсылка,
-	Источники1.ДатаДоступности,
-	Источники1.СкладНазначения
-
-Union All
-
-Select
-	Источники1.НоменклатураСсылка As Номенклатура,
-	Источники1.СкладНазначения As СкладНазначения,
-	Источники1.ДатаДоступности As ДатаДоступности,
-	Sum(Источник2.Количество) As Количество
-From
-	TempSourcesGrouped As Источники1
-		Left Join TempSourcesGrouped As Источник2
-		On Источники1.НоменклатураСсылка = Источник2.НоменклатураСсылка
-		And Источники1.СкладНазначения = Источник2.СкладНазначения
 			And Источники1.ДатаДоступности >= Источник2.ДатаДоступности	
-		Left Join #Temp_StockSourcesAvailable
-		On Источники1.НоменклатураСсылка = #Temp_StockSourcesAvailable.НоменклатураСсылка
-Where @P_StockPriority = 0
-    Or #Temp_StockSourcesAvailable.ОстатокЕсть is null
 Group By
 	Источники1.НоменклатураСсылка,
 	Источники1.ДатаДоступности,

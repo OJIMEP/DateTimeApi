@@ -367,7 +367,6 @@ namespace DateTimeService.Application.Repositories
             queryParameters.Add("@P_MaxDate", new DateTime(5999, 11, 11, 0, 0, 0));
             queryParameters.Add("@P_ApplyShifting", (int)globalParameters.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
             queryParameters.Add("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
-            queryParameters.Add("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             queryParameters.Add("@P_YourTimeDelivery", deliveryType == Constants.YourTimeDelivery ? 1 : 0);
             queryParameters.Add("@P_IsDelivery", deliveryType == Constants.Self ? 0 : 1);
             queryParameters.Add("@P_IsPickup", deliveryType == Constants.Self ? 1 : 0);
