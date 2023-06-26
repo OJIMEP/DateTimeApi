@@ -476,6 +476,10 @@ Select ГруппыПланирования._IDRRef AS ГруппаПланир�
 		THEN ГруппыПланирования._Fld30399
 		ELSE ГруппыПланирования._Fld25519
 	END AS ГруппаПланированияДобавляемоеВремя,
+    CAST(DATEDIFF(SECOND, @P_EmptyDate, CASE WHEN @P_YourTimeDelivery = 1
+		THEN ГруппыПланирования._Fld30398
+		ELSE ГруппыПланирования._Fld25132
+	END) / 60.0 AS NUMERIC(15, 2)) AS СреднееВремяНаПереезд,
     1 AS Основная,
 	ГруппыПланирования._Description
 Into #Temp_PlanningGroups
@@ -507,6 +511,10 @@ Select
 		THEN ПодчиненнаяГП._Fld30399
 		ELSE ПодчиненнаяГП._Fld25519
 	END AS ГруппаПланированияДобавляемоеВремя,
+    CAST(DATEDIFF(SECOND, @P_EmptyDate, CASE WHEN @P_YourTimeDelivery = 1
+		THEN ПодчиненнаяГП._Fld30398
+		ELSE ПодчиненнаяГП._Fld25132
+	END) / 60.0 AS NUMERIC(15, 2)) AS СреднееВремяНаПереезд,
     0,
 	ПодчиненнаяГП._Description
 From
@@ -1614,14 +1622,16 @@ Inner Join #Temp_DateAvailable With (NOLOCK)
     On #Temp_Intervals.ВремяНачала >= #Temp_DateAvailable.DateAvailable
 Inner Join #Temp_TimeService With (NOLOCK) On 1=1
 Inner Join #Temp_PlanningGroupPriority With (NOLOCK) ON #Temp_Intervals.Период = #Temp_PlanningGroupPriority.Период AND #Temp_Intervals.Приоритет = #Temp_PlanningGroupPriority.Приоритет
+Inner Join #Temp_PlanningGroups With (NOLOCK) ON #Temp_Intervals.ГруппаПланирования = #Temp_PlanningGroups.ГруппаПланирования
 Where #Temp_Intervals.Период >= DATEADD(DAY, @P_Credit, @P_DateTimePeriodBegin) -- для кредита возвращаем даты начиная со следующего дня 
 Group By 
 	#Temp_Intervals.ВремяНачала,
 	#Temp_Intervals.ВремяОкончания,
 	#Temp_Intervals.Период,
 	#Temp_TimeService.ВремяВыполнения,
+    #Temp_PlanningGroups.СреднееВремяНаПереезд,
     #Temp_Intervals.Стимулировать
-Having SUM(#Temp_Intervals.КоличествоЗаказовЗаИнтервалВремени) > #Temp_TimeService.ВремяВыполнения
+Having SUM(#Temp_Intervals.КоличествоЗаказовЗаИнтервалВремени) > (#Temp_TimeService.ВремяВыполнения + #Temp_PlanningGroups.СреднееВремяНаПереезд)
 
 Union
 All
