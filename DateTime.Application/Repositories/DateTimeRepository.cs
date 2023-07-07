@@ -113,10 +113,15 @@ namespace DateTimeService.Application.Repositories
 
         private static void DeleteCachedDataFromInputData(List<CodeItemQuery> queryItems, AvailableDateResult dataFromCache)
         {
+            if (!dataFromCache.Data.Any())
+            {
+                return;
+            }
+
             for (int i = queryItems.Count - 1; i >= 0; i--)
             {
                 var item = queryItems[i];
-                var keyField = item.Code is not null ? item.Code : item.Article;
+                var keyField = item.CacheKey;
 
                 if (dataFromCache.Data.ContainsKey(keyField))
                 {
