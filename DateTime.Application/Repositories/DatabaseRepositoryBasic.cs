@@ -1,7 +1,6 @@
 ﻿using DateTimeService.Application.Database;
 using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
-using Hangfire.MemoryStorage.Database;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Memory;
@@ -18,16 +17,16 @@ namespace DateTimeService.Application.Repositories
         private readonly IGeoZones _geoZones;
         private readonly IHttpContextAccessor _contextAccessor;
         private readonly IConfiguration _configuration;
-        private readonly IMemoryCache _memoryCache;
+        private readonly RedisRepository _redisRepository;
 
         public DatabaseRepositoryBasic(IHttpContextAccessor contextAccessor, IConfiguration configuration,
-            IDbConnectionFactory dbConnectionFactory, IMemoryCache memoryCache, IGeoZones geoZones)
+            IDbConnectionFactory dbConnectionFactory, IMemoryCache memoryCache, IGeoZones geoZones, RedisRepository redisRepository)
         {
             _contextAccessor = contextAccessor;
             _configuration = configuration;
             _dbConnectionFactory = dbConnectionFactory;
-            _memoryCache = memoryCache;
             _geoZones = geoZones;
+            _redisRepository = redisRepository;
         }
 
         public async Task<AvailableDateResult> GetAvailableDates(AvailableDateQuery query, CancellationToken token = default)
@@ -608,33 +607,14 @@ namespace DateTimeService.Application.Repositories
 
             string key = "GlobalParameters";
 
-            var parameters = await _memoryCache.GetOrCreateAsync(key, async entry =>
+            var parameters = await _redisRepository.GetFromCache<List<GlobalParameter>>(key);
+
+            if (parameters is null)
             {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
-                return await GlobalParameter.GetParameters(connection, token);
-            });
+                parameters = await GlobalParameter.GetParameters(connection, token);
 
-            //if (_redisSettings.Enabled
-            //    && _redis.IsConnected)
-            //{
-            //    var db = _redis.GetDatabase((int)_redisSettings.Database);
-
-            //    parameters = await db.GetRecord<List<GlobalParameter>>(key);
-            //}
-
-            //if (parameters is null)
-            //{
-            //    parameters = await GlobalParameter.GetParameters(connection, token);
-
-            //    if (_redisSettings.Enabled
-            //        && _redis.IsConnected)
-            //    {
-            //        var db = _redis.GetDatabase((int)_redisSettings.Database);
-
-            //        // кешируем ГП в памяти на 1 час, потом они снова обновятся
-            //        await db.SetRecord(key, parameters, TimeSpan.FromSeconds(600));
-            //    }
-            //}
+                await _redisRepository.SaveToCache(parameters, key, 600);
+            }
 
             watch.Stop();
 

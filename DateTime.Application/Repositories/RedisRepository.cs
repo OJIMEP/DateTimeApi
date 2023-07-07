@@ -74,6 +74,34 @@ namespace DateTimeService.Application.Repositories
             return result;
         }
 
+        public async Task<T?> GetFromCache<T>(string redisKey)
+        {
+            if (!RedisEnabled())
+            {
+                return default;
+            }
+
+            var db = _redis.GetDatabase((int)_settings.Database);
+
+            var value = await db.GetRecord<T>(redisKey);
+
+            return value;
+        }
+
+        public async Task SaveToCache<T>(T value, string redisKey, int lifeTime)
+        {
+            if (!RedisEnabled())
+            {
+                return;
+            }
+
+            // Время жизни ключей
+            var expiry = TimeSpan.FromSeconds(lifeTime);
+            var db = _redis.GetDatabase((int)_settings.Database);
+
+            await db.SetRecord(redisKey, value, expiry);
+        }
+
         private bool RedisEnabled()
         {
             return _settings.Enabled && _redis.IsConnected;

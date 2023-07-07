@@ -92,9 +92,10 @@ namespace DateTimeService.Application
                         ConnectionMultiplexer.Connect(new ConfigurationOptions
                         {
                             EndPoints = { redisSettings.ConnectionString },
+                            Password = redisSettings.Password,
                             ConnectTimeout = 1,
                             DefaultDatabase = (int)redisSettings.Database,
-                            AbortOnConnectFail = false
+                            AbortOnConnectFail = false                         
                         })
                     );
                 }

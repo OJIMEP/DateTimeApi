@@ -4,6 +4,7 @@
     {
         public bool Enabled { get; set; }
         public string ConnectionString { get; set; }
+        public string Password { get; set; }
         public RedisDatabase Database { get; set; }
         public int LifeTime { get; set; }
     }
