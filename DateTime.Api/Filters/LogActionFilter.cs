@@ -58,6 +58,13 @@ namespace DateTimeService.Api.Filters
 
             logElement.FillFromHttpContext(context.HttpContext);
 
+            if (logElement.Status == LogStatus.Ok
+                && String.IsNullOrEmpty(logElement.DatabaseConnection)
+                && logElement.FromCachePercent == 100)
+            {
+                logElement.DatabaseConnection = "Redis";
+            }
+
             if (context.Result is BadRequestObjectResult badRequest)
             {
                 logElement.Status = LogStatus.Error;

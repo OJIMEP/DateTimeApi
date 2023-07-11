@@ -1,4 +1,5 @@
 ﻿using DateTimeService.Application.Logging;
+using Serilog.Data;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 
@@ -23,11 +24,11 @@ namespace DateTimeService.Api.Middlewares
             {
                 var logElement = new ElasticLogElement()
                 {
-                    Status = LogStatus.Error,
                     ErrorDescription = ex.Message + ex.StackTrace
                 };
 
                 logElement.FillFromHttpContext(context);
+                logElement.Status = LogStatus.Error;
 
                 _logger.LogElastic(logElement);
 

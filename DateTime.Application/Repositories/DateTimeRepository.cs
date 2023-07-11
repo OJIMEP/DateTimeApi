@@ -27,7 +27,7 @@ namespace DateTimeService.Application.Repositories
 
             if (queryWithoutQuantity.Codes.Count > 0)
             {
-                var dataFromCache = await _redisRepository.GetAvailableDateResultGromCashe(query.Codes, query.CityId);
+                var dataFromCache = await _redisRepository.GetAvailableDateResultGromCashe(queryWithoutQuantity.Codes, query.CityId);
 
                 _contextAccessor.HttpContext.Items["FromCache"] = dataFromCache.Data.Count;
 
