@@ -556,6 +556,13 @@ Having
 	And SUM(РезервированиеИтоги._Fld21411) - SUM(РезервированиеИтоги._Fld21412) > 0.0
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimeNow='{0}'),KEEP PLAN, KEEPFIXED PLAN);
 
+With SourceWarehouses AS
+(
+Select Distinct Top 10
+	T2.СкладИсточника As СкладИсточника
+From
+	#Temp_Remains T2 WITH(NOLOCK)
+)
 Select Distinct
     ПрогнозныеДатыПоставокНаСклады._Fld23831RRef As СкладИсточника,
     ПрогнозныеДатыПоставокНаСклады._Fld23832 As ДатаСобытия,
@@ -568,11 +575,13 @@ From
 	On ПрогнозныеДатыПоставокНаСклады._Fld23831RRef = #Temp_Remains.СкладИсточника
 	And ПрогнозныеДатыПоставокНаСклады._Fld23832 = #Temp_Remains.ДатаСобытия
 	And ПрогнозныеДатыПоставокНаСклады._Fld23833RRef In (Select СкладСсылка From #Temp_GeoData Union All Select СкладСсылка From #Temp_PickupPoints)
+    Inner Join SourceWarehouses 
+	On ПрогнозныеДатыПоставокНаСклады._Fld23831RRef = SourceWarehouses.СкладИсточника
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With SourceWarehouses AS
 (
-Select Distinct
+Select Distinct Top 10
 	T2.СкладИсточника As СкладИсточника
 From
 	#Temp_Remains T2 WITH(NOLOCK)

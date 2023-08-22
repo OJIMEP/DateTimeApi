@@ -371,7 +371,7 @@ namespace DateTimeService.Application.Repositories
             queryParameters.Add("@P_IsDelivery", deliveryType == Constants.Self ? 0 : 1);
             queryParameters.Add("@P_IsPickup", deliveryType == Constants.Self ? 1 : 0);
 
-            string pickupPointsString = !query.PickupPoints.Any() ? "''" : string.Join(", ", query.PickupPoints
+            string pickupPointsString = !query.PickupPoints.Any() ? "''" : string.Join(", ", query.PickupPoints.Take(10)
                 .Select((value, index) =>
                 {
                     string parameterName = $"@PickupPoint{index}";
