@@ -367,7 +367,7 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_AdressCode", query.AddressId != null ? query.AddressId : DBNull.Value);
             cmd.Parameters.AddWithValue("@PickupPoint1", query.PickupPoint != null ? query.PickupPoint : DBNull.Value);
             cmd.Parameters.AddWithValue("@P_Credit", query.Payment == "partly_pay" ? 1 : 0);
-            cmd.Parameters.AddWithValue("@P_Floor", (double)(query.Floor != null ? query.Floor : parameters1C.GetValue("Логистика_ЭтажПоУмолчанию")));
+            cmd.Parameters.AddWithValue("@P_Floor", query.FloorForIntervalList());
             cmd.Parameters.AddWithValue("@P_DaysToShow", 7);
             cmd.Parameters.AddWithValue("@P_DateTimeNow", DateMove);
             cmd.Parameters.AddWithValue("@P_DateTimePeriodBegin", DateMove.Date);
@@ -398,6 +398,7 @@ namespace DateTimeService.Application.Repositories
 
             return cmd;
         }
+
 
         private async Task<SqlCommand> AvailableDeliveryTypesCommand(SqlConnection connection, AvailableDeliveryTypesQuery query, string deliveryType, DatabaseType databaseType)
         {

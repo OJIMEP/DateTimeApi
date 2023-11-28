@@ -16,6 +16,9 @@ namespace DateTimeService.Contracts.Requests
         [JsonPropertyName("floor")]
         public double? Floor { get; set; }
 
+        [JsonPropertyName("apartment")]
+        public double? Apartment { get; set; }
+
         [JsonPropertyName("payment")]
         public string? Payment { get; set; }
 

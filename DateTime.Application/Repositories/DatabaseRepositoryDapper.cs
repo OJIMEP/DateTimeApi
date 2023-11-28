@@ -317,7 +317,7 @@ namespace DateTimeService.Application.Repositories
             queryParameters.Add("@P_AdressCode", query.AddressId);
             queryParameters.Add("@PickupPoint1", query.PickupPoint);
             queryParameters.Add("@P_Credit", query.Payment == "partly_pay" ? 1 : 0);
-            queryParameters.Add("@P_Floor", (double)(query.Floor != null ? query.Floor : globalParameters.GetValue("Логистика_ЭтажПоУмолчанию")));
+            queryParameters.Add("@P_Floor", query.FloorForIntervalList());
             queryParameters.Add("@P_DaysToShow", 7);
             queryParameters.Add("@P_DateTimeNow", DateMove);
             queryParameters.Add("@P_DateTimePeriodBegin", DateMove.Date);

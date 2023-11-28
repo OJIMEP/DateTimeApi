@@ -26,6 +26,7 @@ namespace DateTimeService.Api.Mapping
                 DeliveryType = request.DeliveryType,
                 PickupPoint = request.PickupPoint,
                 Floor = request.Floor,
+                Apartment = request.Apartment,
                 Payment = request.Payment,
                 OrderNumber = request.OrderNumber,
                 OrderDate = request.OrderDate,
