@@ -224,8 +224,9 @@ From _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
 	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
 		ON ЦеныТолькоПрайсы._Fld21443RRef = ExchangeRates._Fld14558RRef
 		AND ЦеныТолькоПрайсы._Fld21410_RTRef = 0x00000153 --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса
-		AND (ЦеныТолькоПрайсы._Fld21982 <> 0 
-			AND ЦеныТолькоПрайсы._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 >= ЦеныТолькоПрайсы._Fld21982 OR ЦеныТолькоПрайсы._Fld21411 >= ЦеныТолькоПрайсы._Fld21616)
+        And ЦеныТолькоПрайсы._Fld30969 = 0x00 -- ОтказПоФильтруЦен = Ложь
+		--AND (ЦеныТолькоПрайсы._Fld21982 <> 0 
+			--AND ЦеныТолькоПрайсы._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 >= ЦеныТолькоПрайсы._Fld21982 OR ЦеныТолькоПрайсы._Fld21411 >= ЦеныТолькоПрайсы._Fld21616)
 		And ЦеныТолькоПрайсы._Fld21408RRef IN(SELECT
                 НоменклатураСсылка
             FROM
