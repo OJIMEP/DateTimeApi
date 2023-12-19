@@ -399,7 +399,6 @@ namespace DateTimeService.Application.Repositories
             return cmd;
         }
 
-
         private async Task<SqlCommand> AvailableDeliveryTypesCommand(SqlConnection connection, AvailableDeliveryTypesQuery query, string deliveryType, DatabaseType databaseType)
         {
             var parameters1C = await GetGlobalParameters(connection);

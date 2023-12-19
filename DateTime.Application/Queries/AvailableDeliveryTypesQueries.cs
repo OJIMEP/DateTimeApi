@@ -559,10 +559,22 @@ OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimeNow='{0}'),KEEP PLAN, KEEPFIXED PLA
 
 With SourceWarehouses AS
 (
-Select Distinct Top 10
-	T2.СкладИсточника As СкладИсточника
+--Select Distinct Top 10
+--	T2.СкладИсточника As СкладИсточника
+--From
+--	#Temp_Remains T2 WITH(NOLOCK)
+Select 
+	Subquery.СкладИсточника
 From
-	#Temp_Remains T2 WITH(NOLOCK)
+	(Select 
+		T2.СкладИсточника As СкладИсточника,
+		T2.НоменклатураСсылка, 
+		ROW_NUMBER() OVER(
+		PARTITION BY НоменклатураСсылка
+		ORDER BY СкладИсточника) AS rownum
+From
+	#Temp_Remains T2 WITH(NOLOCK)) As Subquery
+Where Subquery.rownum <= 10
 )
 Select Distinct
     ПрогнозныеДатыПоставокНаСклады._Fld23831RRef As СкладИсточника,
@@ -582,10 +594,22 @@ OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With SourceWarehouses AS
 (
-Select Distinct Top 10
-	T2.СкладИсточника As СкладИсточника
+--Select Distinct Top 10
+--	T2.СкладИсточника As СкладИсточника
+--From
+--	#Temp_Remains T2 WITH(NOLOCK)
+Select 
+	Subquery.СкладИсточника
 From
-	#Temp_Remains T2 WITH(NOLOCK)
+	(Select 
+		T2.СкладИсточника As СкладИсточника,
+		T2.НоменклатураСсылка, 
+		ROW_NUMBER() OVER(
+		PARTITION BY НоменклатураСсылка
+		ORDER BY СкладИсточника) AS rownum
+From
+	#Temp_Remains T2 WITH(NOLOCK)) As Subquery
+Where Subquery.rownum <= 10
 )
 Select
 	ПрогнозныеДатыПоставокНаСклады._Fld23831RRef As СкладИсточника,
