@@ -559,7 +559,7 @@ OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimeNow='{0}'),KEEP PLAN, KEEPFIXED PLA
 
 With SourceWarehouses AS
 (
---Select Distinct Top 10
+--Select Distinct
 --	T2.СкладИсточника As СкладИсточника
 --From
 --	#Temp_Remains T2 WITH(NOLOCK)
@@ -594,7 +594,7 @@ OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With SourceWarehouses AS
 (
---Select Distinct Top 10
+--Select Distinct
 --	T2.СкладИсточника As СкладИсточника
 --From
 --	#Temp_Remains T2 WITH(NOLOCK)
