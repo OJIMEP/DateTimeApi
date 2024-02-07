@@ -368,45 +368,58 @@ FROM
     ) T3 ON 1 = 1
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
+Select 
+	SUM(T1.КоличествоСтрок) AS КоличествоСтрок,
+	SUM(Case when T1.УсловиеЭтажМассаПоТоварам = 0 then T1.Вес else 0 end) AS Вес,
+	SUM(Case when T1.УсловиеЭтажМассаПоТоварам = 0 then T1.Объем else 0 end) AS Объем,
+	SUM(T1.УсловиеЭтажМассаПоТоварам) AS УсловиеЭтажМассаОбщ,
+	SUM(T1.УсловиеПоМаркируемымТоварам) AS УсловиеПоМаркируемымТоварам
+Into #Temp_TotalWeight
+From 
+	#Temp_Weight T1
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
 SELECT
-    T2.Fld24090_ * SUM(T1.КоличествоСтрок) AS УсловиеКоличествоСтрок,
+    T2.Fld24090_ * T1.КоличествоСтрок AS УсловиеКоличествоСтрок,
     CASE
-        WHEN SUM(T1.Объем) < 0.8
-			AND SUM(T1.Вес) < 5.0 THEN T2.Fld24094_
-        WHEN SUM(T1.Объем) < 0.8
-			AND SUM(T1.Вес) >= 5.0
-			AND SUM(T1.Вес) < 20.0 THEN T2.Fld24095_
-        WHEN SUM(T1.Объем) < 0.8
-			AND SUM(T1.Вес) >= 20.0
-			AND SUM(T1.Вес) < 65.0 THEN T2.Fld24096_
-        WHEN SUM(T1.Объем) < 0.8
-			AND SUM(T1.Вес) >= 65.0
-			AND SUM(T1.Вес) < 120.0 THEN T2.Fld24097_
-        WHEN SUM(T1.Объем) < 0.8
-			AND SUM(T1.Вес) >= 120.0
-			AND SUM(T1.Вес) < 250.0 THEN T2.Fld24098_
-        WHEN SUM(T1.Объем) < 0.8
-			AND SUM(T1.Вес) >= 250.0
-			AND SUM(T1.Вес) < 400.0 THEN T2.Fld26611_
-        WHEN SUM(T1.Объем) < 0.8
-			AND SUM(T1.Вес) >= 400.0 THEN T2.Fld26612_
-        WHEN SUM(T1.Объем) >= 0.8
-			AND SUM(T1.Вес) < 120.0 THEN T2.Fld24099_
-        WHEN SUM(T1.Объем) >= 0.8
-			AND SUM(T1.Вес) >= 120.0
-			AND SUM(T1.Вес) < 250.0 THEN T2.Fld24100_
-        WHEN SUM(T1.Объем) >= 0.8
-			AND SUM(T1.Вес) >= 250.0
-			AND SUM(T1.Вес) < 600.0 THEN T2.Fld26613_
-        WHEN SUM(T1.Объем) >= 0.8
-			AND SUM(T1.Вес) >= 600.0 THEN T2.Fld26614_
+        WHEN T1.Объем = 0
+			AND T1.Вес = 0 THEN 0
+        WHEN T1.Объем < 0.8
+			AND T1.Вес < 5.0 THEN T2.Fld24094_
+        WHEN T1.Объем < 0.8
+			AND T1.Вес >= 5.0
+			AND T1.Вес < 20.0 THEN T2.Fld24095_
+        WHEN (T1.Объем) < 0.8
+			AND T1.Вес >= 20.0
+			AND T1.Вес < 65.0 THEN T2.Fld24096_
+        WHEN T1.Объем < 0.8
+			AND T1.Вес >= 65.0
+			AND T1.Вес < 120.0 THEN T2.Fld24097_
+        WHEN T1.Объем < 0.8
+			AND T1.Вес >= 120.0
+			AND T1.Вес < 250.0 THEN T2.Fld24098_
+        WHEN T1.Объем < 0.8
+			AND T1.Вес >= 250.0
+			AND T1.Вес < 400.0 THEN T2.Fld26611_
+        WHEN T1.Объем < 0.8
+			AND T1.Вес >= 400.0 THEN T2.Fld26612_
+        WHEN T1.Объем >= 0.8
+			AND T1.Вес < 120.0 THEN T2.Fld24099_
+        WHEN T1.Объем >= 0.8
+			AND T1.Вес >= 120.0
+			AND T1.Вес < 250.0 THEN T2.Fld24100_
+        WHEN T1.Объем >= 0.8
+			AND T1.Вес >= 250.0
+			AND T1.Вес < 600.0 THEN T2.Fld26613_
+        WHEN T1.Объем >= 0.8
+			AND T1.Вес >= 600.0 THEN T2.Fld26614_
     END As УсловиеВесОбъем,
     T2.Fld24089_ As МинимальноеВремя,
-    SUM(T1.УсловиеПоМаркируемымТоварам) AS УсловиеПоМаркируемымТоварам,
-    SUM(T1.УсловиеЭтажМассаПоТоварам) As УсловиеЭтажМассаОбщ
+    T1.УсловиеПоМаркируемымТоварам AS УсловиеПоМаркируемымТоварам,
+    T1.УсловиеЭтажМассаОбщ As УсловиеЭтажМассаОбщ
 INTO #Temp_Time1
 FROM
-    #Temp_Weight T1 WITH(NOLOCK)
+    #Temp_TotalWeight T1 WITH(NOLOCK)
     INNER JOIN (
         SELECT
             T5._Fld24090 AS Fld24090_,
@@ -431,20 +444,6 @@ FROM
             ) T3
             INNER JOIN dbo._InfoRg24088 T5 ON T3.MAXPERIOD_ = T5._Period
     ) T2 ON 1 = 1
-GROUP BY
-    T2.Fld24090_,
-    T2.Fld24089_,
-    T2.Fld24094_,
-    T2.Fld24095_,
-    T2.Fld24096_,
-    T2.Fld24097_,
-    T2.Fld24098_,
-    T2.Fld26611_,
-    T2.Fld26612_,
-    T2.Fld26613_,
-    T2.Fld26614_,
-    T2.Fld24099_,
-    T2.Fld24100_
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 /*Время обслуживания началось выше и тут итоговая цифра*/
