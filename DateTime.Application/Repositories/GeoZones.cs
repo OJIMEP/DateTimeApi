@@ -13,9 +13,9 @@ namespace DateTimeService.Application.Repositories
 {
     public interface IGeoZones
     {
-        Task<string> GetGeoZoneID(AddressCoordinates coords);
+        Task<string> GetGeoZoneID(AddressCoordinates coords, CancellationToken token = default);
 
-        Task<AddressCoordinates> GetAddressCoordinates(string address_id);
+        Task<AddressCoordinates> GetAddressCoordinates(string address_id, CancellationToken token = default);
 
         Task<Boolean> AdressExists(SqlConnection connection, string _addressId, CancellationToken token = default);
 
@@ -59,14 +59,14 @@ namespace DateTimeService.Application.Repositories
             return result;
         }
 
-        public async Task<AddressCoordinates> GetAddressCoordinates(string address_id)
+        public async Task<AddressCoordinates> GetAddressCoordinates(string address_id, CancellationToken token = default)
         {
 
             AddressCoordinates result = new();
 
             var client = _httpClientFactory.CreateClient();
 
-            client.Timeout = new TimeSpan(0, 0, 8);
+            client.Timeout = new TimeSpan(0, 0, 5);
             client.DefaultRequestHeaders.Add("Accept", "application/vnd.api+json");
             
             string connString = _configuration.GetConnectionString("api21vekby_location");
@@ -81,7 +81,7 @@ namespace DateTimeService.Application.Repositories
 
             try
             {
-                var response = await client.SendAsync(request);
+                var response = await client.SendAsync(request, token);
                 if (response.IsSuccessStatusCode)
                 {
                     var responseString = await response.Content.ReadAsStringAsync();
@@ -103,15 +103,15 @@ namespace DateTimeService.Application.Repositories
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new Exception($"GetAddressCoordinates: {uri}. {ex.Message}");
             }
 
             return result;
         }
 
-        public async Task<string> GetGeoZoneID(AddressCoordinates coords)
+        public async Task<string> GetGeoZoneID(AddressCoordinates coords, CancellationToken token = default)
         {
             string connString = _configuration.GetConnectionString("BTS_zones");
             string login = _configuration.GetValue<string>("BTS_login");
@@ -119,7 +119,7 @@ namespace DateTimeService.Application.Repositories
 
             var client = _httpClientFactory.CreateClient();
 
-            client.Timeout = new TimeSpan(0, 0, 8);
+            client.Timeout = new TimeSpan(0, 0, 5);
 
             var request = new HttpRequestMessage(HttpMethod.Post,
             connString);
@@ -150,7 +150,7 @@ namespace DateTimeService.Application.Repositories
             string result = "";
             try
             {
-                var response = await client.SendAsync(request);
+                var response = await client.SendAsync(request, token);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -164,9 +164,9 @@ namespace DateTimeService.Application.Repositories
                     throw new Exception(response.ToString());
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new Exception("GetGeoZoneID: " + ex.Message);
             }
             return result;
         }
@@ -202,12 +202,12 @@ namespace DateTimeService.Application.Repositories
                 }
                 else
                 {
-                    coords = await GetAddressCoordinates(query.AddressId);
+                    coords = await GetAddressCoordinates(query.AddressId, token);
                 }
 
                 if (coords.AvailableToUse)
                 {
-                    zoneId = await GetGeoZoneID(coords);
+                    zoneId = await GetGeoZoneID(coords, token);
                 }
             }
 

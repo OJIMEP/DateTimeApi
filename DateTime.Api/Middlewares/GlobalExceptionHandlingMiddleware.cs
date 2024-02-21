@@ -1,6 +1,6 @@
 ﻿using DateTimeService.Application.Logging;
-using Serilog.Data;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Net;
 
 namespace DateTimeService.Api.Middlewares
@@ -16,6 +16,8 @@ namespace DateTimeService.Api.Middlewares
 
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
+            Stopwatch watch = Stopwatch.StartNew();
+
             try
             {
                 await next(context);
@@ -24,11 +26,14 @@ namespace DateTimeService.Api.Middlewares
             {
                 var logElement = new ElasticLogElement()
                 {
-                    ErrorDescription = ex.Message + ex.StackTrace
+                    ErrorDescription = ex.Message
                 };
 
                 logElement.FillFromHttpContext(context);
                 logElement.Status = LogStatus.Error;
+
+                watch.Stop();
+                logElement.TimeFullExecution = watch.ElapsedMilliseconds;
 
                 _logger.LogElastic(logElement);
 
