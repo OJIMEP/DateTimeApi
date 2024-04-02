@@ -102,6 +102,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
                     AvailableDateQueries.AvailableDate3,
                     AvailableDateQueries.AvailableDate4SourcesWithPrices,
+                    AvailableDateQueries.PickupDateShift,
                     AvailableDateQueries.AvailableDate5,
                     AvailableDateQueries.AvailableDate6IntervalsBasic,
                     AvailableDateQueries.AvailableDate7,

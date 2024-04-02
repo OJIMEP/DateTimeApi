@@ -238,6 +238,7 @@ namespace DateTimeService.Application.Repositories
                 dbConnection.UseAggregations ? AvailableDateQueries.AvailableDate2MinimumWarehousesCustom : AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
                 query.CheckQuantity ? AvailableDateQueries.AvailableDateWithCount3 : AvailableDateQueries.AvailableDate3,
                 AvailableDateQueries.AvailableDate4SourcesWithPrices,
+                AvailableDateQueries.PickupDateShift,
                 query.CheckQuantity ? AvailableDateQueries.AvailableDateWithCount5 : AvailableDateQueries.AvailableDate5,
                 dbConnection.UseAggregations ? AvailableDateQueries.AvailableDate6IntervalsCustom : AvailableDateQueries.AvailableDate6IntervalsBasic,
                 AvailableDateQueries.AvailableDate7,

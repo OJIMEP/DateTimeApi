@@ -1043,6 +1043,16 @@ Group by
 	T4.СкладНазначения
 OPTION (HASH GROUP, KEEP PLAN, KEEPFIXED PLAN);
 
+Select
+	СмещениеДатДоставки._Fld25220RRef As Склад,
+	СмещениеДатДоставки._Fld25221 As РазмерСмещения
+Into #Temp_PickupDateShift
+From dbo._InfoRg25217 СмещениеДатДоставки With (NOLOCK)
+	Inner Join #Temp_PickupPoints PickupPoints
+	On PickupPoints.СкладСсылка = СмещениеДатДоставки._Fld25220RRef
+	And СмещениеДатДоставки._Fld25218 <= @P_DateTimeNow
+	And СмещениеДатДоставки._Fld25219 >= @P_DateTimeNow;
+
 With Temp_CountOfGoods AS
 (
 SELECT
@@ -1051,14 +1061,17 @@ FROM
     #Temp_Goods T1 WITH(NOLOCK)
 )
 Select Top 1 
-	Max(#Temp_ClosestDatesByGoods.БлижайшаяДата) AS DateAvailable, 
-    СкладНазначения AS СкладНазначения
+	Max(DATEADD(HOUR, ISNULL(СмещениеДатДоставки.РазмерСмещения, 0), БлижайщиеДатыПоТоварам.БлижайшаяДата)) AS DateAvailable, 
+    БлижайщиеДатыПоТоварам.СкладНазначения AS СкладНазначения
 Into #Temp_DateAvailable
-from #Temp_ClosestDatesByGoods With (NOLOCK)
+from #Temp_ClosestDatesByGoods БлижайщиеДатыПоТоварам With (NOLOCK)
     LEFT OUTER JOIN Temp_CountOfGoods
 	    ON 1 = 1
-Group by СкладНазначения
-HAVING COUNT(DISTINCT #Temp_ClosestDatesByGoods.НоменклатураСсылка) = MIN(Temp_CountOfGoods.CountOfGoods)
+	LEFT OUTER JOIN #Temp_PickupDateShift СмещениеДатДоставки
+	On СмещениеДатДоставки.Склад = БлижайщиеДатыПоТоварам.СкладНазначения
+    And БлижайщиеДатыПоТоварам.БлижайшаяДата < DATEADD(DAY, 2, @P_DateTimePeriodBegin) -- дата меньше чем конец завтрашнего дня
+Group by БлижайщиеДатыПоТоварам.СкладНазначения
+HAVING COUNT(DISTINCT БлижайщиеДатыПоТоварам.НоменклатураСсылка) = MIN(Temp_CountOfGoods.CountOfGoods)
 Order by DateAvailable ASC
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 /*Тут закончился процесс оптимальной даты. Склад назначения нужен чтоб потом правильную ГП выбрать*/

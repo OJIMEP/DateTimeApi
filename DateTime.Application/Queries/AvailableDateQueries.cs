@@ -233,7 +233,7 @@ From _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
                 #Temp_GoodsPackages)
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 				
-Select 
+Select Distinct
 	Цены._Fld21408RRef AS Номенклатура,
 	Цены._Fld21410_RRRef AS РегистраторЦен_RRRef,
 	Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 AS Цена
@@ -445,6 +445,16 @@ FROM
 Where  T1.Цена <> 0
 OPTION (KEEP PLAN, KEEPFIXED PLAN, maxdop 2);";
 
+        public const string PickupDateShift = @"
+Select
+	СмещениеДатДоставки._Fld25220RRef As Склад,
+	СмещениеДатДоставки._Fld25221 As РазмерСмещения
+Into #Temp_PickupDateShift
+From dbo._InfoRg25217 СмещениеДатДоставки With (NOLOCK)
+	Inner Join #Temp_PickupPoints PickupPoints
+	On PickupPoints.СкладСсылка = СмещениеДатДоставки._Fld25220RRef
+	And СмещениеДатДоставки._Fld25218 <= @P_DateTimeNow
+	And СмещениеДатДоставки._Fld25219 >= @P_DateTimeNow;";
 
         public const string AvailableDate5 = @"
 
@@ -716,11 +726,14 @@ SELECT
     T1.НоменклатураСсылка,
 	T1.article,
 	T1.code,
-    MIN(T1.ДатаДоступности) AS ДатаСоСклада,
+    MIN(DATEADD(HOUR, ISNULL(СмещениеДатДоставки.РазмерСмещения, 0), T1.ДатаДоступности)) AS ДатаСоСклада,
 	T1.СкладНазначения
 Into #Temp_ShipmentDatesPickUp
 FROM 
     #Temp_ShipmentDates T1 WITH(NOLOCK)
+	LEFT OUTER JOIN #Temp_PickupDateShift СмещениеДатДоставки
+	On СмещениеДатДоставки.Склад = T1.СкладНазначения
+	And T1.ДатаДоступности < DATEADD(DAY, 2, @P_DateTimePeriodBegin) -- дата меньше чем конец завтрашнего дня
 Where T1.PickUp = 1
 GROUP BY
     T1.НоменклатураСсылка,
@@ -1438,7 +1451,7 @@ From _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
                 #Temp_GoodsPackages)
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 				
-Select 
+Select Distinct
 	Цены._Fld21408RRef AS Номенклатура,
 	Цены._Fld21410_RRRef AS РегистраторЦен_RRRef,
 	Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 AS Цена
@@ -1962,11 +1975,14 @@ SELECT
     T1.НоменклатураСсылка,
 	T1.article,
 	T1.code,
-    MIN(T1.ДатаДоступности) AS ДатаСоСклада,
+    MIN(DATEADD(HOUR, ISNULL(СмещениеДатДоставки.РазмерСмещения, 0), T1.ДатаДоступности)) AS ДатаСоСклада,
 	T1.СкладНазначения
 Into #Temp_ShipmentDatesPickUp
 FROM 
     #Temp_ShipmentDates T1 WITH(NOLOCK)
+	LEFT OUTER JOIN #Temp_PickupDateShift СмещениеДатДоставки
+	On СмещениеДатДоставки.Склад = T1.СкладНазначения
+	And T1.ДатаДоступности < DATEADD(DAY, 2, @P_DateTimePeriodBegin) -- дата меньше чем конец завтрашнего дня
 Where T1.PickUp = 1
 GROUP BY
     T1.НоменклатураСсылка,
