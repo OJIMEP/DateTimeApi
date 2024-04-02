@@ -30,11 +30,10 @@
             
             if (IsNullOrEmpty(Floor))
             {
-                // комментирую пока сайт не доработает
-                //if (IsNullOrEmpty(Apartment))
-                //{
-                //    return 0;
-                //}
+                if (IsNullOrEmpty(Apartment))
+                {
+                    return 0;
+                }
                 return defaultFloor;
             }
 
