@@ -9,12 +9,18 @@ namespace DateTimeService.Application.Repositories
         {
             return list.First(x => x.Name.Contains(name)).ValueDouble;
         }
+
+        public static string GetString(this List<GlobalParameter> list, string name)
+        {
+            return list.First(x => x.Name.Contains(name)).ValueString;
+        }
     }
 
     public class GlobalParameter
     {
         public required string Name { get; init; }
         public double ValueDouble { get; set; }
+        public string ValueString { get; set; }
         public double DefaultDouble { get; set; }
         public bool UseDefault { get; set; }
 
@@ -57,6 +63,20 @@ namespace DateTimeService.Application.Repositories
                 {
                     Name = "ПриоритизироватьСток_64854",
                     DefaultDouble = 0
+                },
+                new GlobalParameter
+                {
+                    Name = "БелпочтаМинимальныйСрокДоставки",
+                    DefaultDouble = 1
+                },
+                new GlobalParameter
+                {
+                    Name = "БелпочтаМаксимальныйСрокДоставки",
+                    DefaultDouble = 3
+                },
+                new GlobalParameter
+                {
+                    Name = "БелпочтаКодЦентральногоОтделения"
                 }
             };
 
@@ -71,6 +91,7 @@ namespace DateTimeService.Application.Repositories
                 SELECT [_Fld22354] As Name,
                     [_Fld22355_TYPE] As TypeValue,     
                     [_Fld22355_L] As LogicValue,    
+                    [_Fld22355_S] As StringValue,    
                     [_Fld22355_N] As NumberValue     
                 FROM [dbo].[_InfoRg22353]
                 WHERE [_Fld22354] IN({0})
@@ -93,9 +114,13 @@ namespace DateTimeService.Application.Repositories
 
             foreach (var parameter in results)
             {
-                if (parameter.TypeValue[0] == 2) //boolean
+                if (parameter.TypeValue[0] == 2) // boolean
                 {
                     names.First(x => x.Name.Contains(parameter.Name)).ValueDouble = parameter.LogicValue[0];
+                }
+                else if (parameter.TypeValue[0] == 5) // string
+                {
+                    names.First(x => x.Name.Contains(parameter.Name)).ValueString = parameter.StringValue;
                 }
                 else
                 {
@@ -118,6 +143,7 @@ namespace DateTimeService.Application.Repositories
             public byte[] TypeValue { get; set; }
             public byte[] LogicValue { get; set; }
             public decimal NumberValue { get; set; }
+            public string StringValue { get; set; }
         }
     }
 }

@@ -193,6 +193,13 @@ namespace DateTimeService.Application.Repositories
             {
                 var globalParameters = await GetGlobalParameters(connection, token);
 
+                var isBelpostDelivery = query.PickupPointType == Constants.BelpostPickupPoint;
+
+                if (isBelpostDelivery)
+                {
+                    query.PickupPoint = globalParameters.GetString("БелпочтаКодЦентральногоОтделения");
+                }
+
                 var queryParameters = new DynamicParameters();
 
                 string queryText = IntervalListQueryText(query, globalParameters, queryParameters, dbConnection, zoneId);
@@ -209,12 +216,20 @@ namespace DateTimeService.Application.Repositories
                     var end = element.EndDate.AddYears(-2000);
                     var bonus = element.Bonus == 1;
 
+                    if (isBelpostDelivery)
+                    {
+                        begin = begin.Date.AddDays(globalParameters.GetValue("БелпочтаМинимальныйСрокДоставки"));
+                        end = end.Date.AddDays(globalParameters.GetValue("БелпочтаМаксимальныйСрокДоставки"));
+                    }
+
                     result.Data.Add(new IntervalListElementResult
                     {
                         Begin = begin,
                         End = end,
                         Bonus = bonus
                     });
+
+                    if (isBelpostDelivery) { break; }
                 }
 
                 watch.Stop();

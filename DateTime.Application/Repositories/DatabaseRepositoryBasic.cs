@@ -156,7 +156,15 @@ namespace DateTimeService.Application.Repositories
                     throw new ValidationException("Адрес и геозона не найдены!");
                 }
 
-                SqlCommand command = await IntervalListCommand(connection, query, dbConnection.DatabaseType, zoneId);
+                var globalParameters = await GetGlobalParameters(connection, token);
+                var isBelpostDelivery = query.PickupPointType == Constants.BelpostPickupPoint;
+
+                if (isBelpostDelivery)
+                {
+                    query.PickupPoint = globalParameters.GetString("БелпочтаКодЦентральногоОтделения");
+                }
+
+                SqlCommand command = await IntervalListCommand(connection, query, dbConnection.DatabaseType, zoneId, globalParameters);
 
                 watch.Restart();
 
@@ -170,12 +178,20 @@ namespace DateTimeService.Application.Repositories
                         var end = dr.GetDateTime(1).AddYears(-2000);
                         var bonus = dr.GetInt32(3) == 1;
 
+                        if (isBelpostDelivery)
+                        {
+                            begin = begin.Date.AddDays(globalParameters.GetValue("БелпочтаМинимальныйСрокДоставки"));
+                            end = end.Date.AddDays(globalParameters.GetValue("БелпочтаМаксимальныйСрокДоставки"));
+                        }
+
                         result.Data.Add(new IntervalListElementResult
                         {
                             Begin = begin,
                             End = end,
                             Bonus = bonus
                         });
+
+                        if (isBelpostDelivery) { break; }
                     }
                 }
 
@@ -343,10 +359,12 @@ namespace DateTimeService.Application.Repositories
             return cmd;
         }
 
-        private async Task<SqlCommand> IntervalListCommand(SqlConnection connection, IntervalListQuery query, DatabaseType databaseType, string zoneId)
+        private async Task<SqlCommand> IntervalListCommand(SqlConnection connection, 
+            IntervalListQuery query, 
+            DatabaseType databaseType, 
+            string zoneId, 
+            List<GlobalParameter> globalParameters)
         {
-            var parameters1C = await GetGlobalParameters(connection);
-
             string queryText = IntervalListQueries.IntervalList;
             SqlCommand cmd = new(queryText, connection)
             {
@@ -372,16 +390,16 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_DaysToShow", 7);
             cmd.Parameters.AddWithValue("@P_DateTimeNow", DateMove);
             cmd.Parameters.AddWithValue("@P_DateTimePeriodBegin", DateMove.Date);
-            cmd.Parameters.AddWithValue("@P_DateTimePeriodEnd", DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
+            cmd.Parameters.AddWithValue("@P_DateTimePeriodEnd", DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
             cmd.Parameters.AddWithValue("@P_TimeNow", new DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second));
             cmd.Parameters.AddWithValue("@P_EmptyDate", new DateTime(2001, 1, 1, 0, 0, 0));
             cmd.Parameters.AddWithValue("@P_MaxDate", new DateTime(5999, 11, 11, 0, 0, 0));
             cmd.Parameters.AddWithValue("@P_GeoCode", zoneId);
             cmd.Parameters.AddWithValue("@P_OrderDate", query.OrderDate.AddYears(2000));
             cmd.Parameters.AddWithValue("@P_OrderNumber", query.OrderNumber != null ? query.OrderNumber : DBNull.Value);
-            cmd.Parameters.AddWithValue("@P_ApplyShifting", (int)parameters1C.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
-            cmd.Parameters.AddWithValue("@P_DaysToShift", (int)parameters1C.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
-            cmd.Parameters.AddWithValue("@P_StockPriority", (int)parameters1C.GetValue("ПриоритизироватьСток_64854"));
+            cmd.Parameters.AddWithValue("@P_ApplyShifting", (int)globalParameters.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            cmd.Parameters.AddWithValue("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            cmd.Parameters.AddWithValue("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             cmd.Parameters.AddWithValue("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
 
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
@@ -390,9 +408,9 @@ namespace DateTimeService.Application.Repositories
                 "",
                 dateTimeNowOptimizeString,
                 DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
-                DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
-                parameters1C.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
-                parameters1C.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
+                DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
+                globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
+                globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 databaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("useIndexHintWarehouseDates") : ""); // index hint
 
             cmd.CommandText = queryText;

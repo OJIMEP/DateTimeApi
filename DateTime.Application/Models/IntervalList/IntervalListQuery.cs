@@ -8,6 +8,8 @@
 
         public string PickupPoint { get; set; }
 
+        public string PickupPointType { get; set; }
+
         public double? Floor { get; set; }
 
         public double? Apartment { get; set; }

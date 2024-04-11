@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace DateTimeService.Contracts.Requests
 {
@@ -12,6 +13,9 @@ namespace DateTimeService.Contracts.Requests
 
         [JsonPropertyName("pickup_point")]
         public string? PickupPoint { get; set; }
+
+        [JsonPropertyName("pickup_point_type")]
+        public string? PickupPointType { get; set; }
 
         [JsonPropertyName("floor")]
         public double? Floor { get; set; }
