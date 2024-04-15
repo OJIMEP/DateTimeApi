@@ -1139,15 +1139,26 @@ GROUP BY
 	T1.code
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'),KEEP PLAN, KEEPFIXED PLAN);
 
+Select Top 1 
+	DATEDIFF(Minute, ИнтервалыДоставкиВВашеВремя._Fld30390, ИнтервалыДоставкиВВашеВремя._Fld30391) As YourTimeInterval
+Into #Temp_YourTimeInterval
+From 
+	#Temp_GeoData Геозоны
+	Inner Join _Reference114_VT30388 ИнтервалыДоставкиВВашеВремя
+		On ИнтервалыДоставкиВВашеВремя._Reference114_IDRRef = Геозоны.Геозона
+;
+
 Select 
 	IsNull(#Temp_AvailableCourier.article,#Temp_AvailablePickUp.article) AS Article,
 	IsNull(#Temp_AvailableCourier.code,#Temp_AvailablePickUp.code) AS Code,
 	IsNull(#Temp_AvailableCourier.ДатаКурьерскойДоставки,@P_MaxDate) AS Courier,
-	IsNull(#Temp_AvailablePickUp.ВремяНачала,@P_MaxDate) AS Self
+	IsNull(#Temp_AvailablePickUp.ВремяНачала,@P_MaxDate) AS Self,
+	IsNull(#Temp_YourTimeInterval.YourTimeInterval, 0) YourTimeInterval
 From
 	#Temp_AvailableCourier 
 	FULL Join #Temp_AvailablePickUp 
-		On #Temp_AvailableCourier.НоменклатураСсылка = #Temp_AvailablePickUp.НоменклатураСсылка";
+		On #Temp_AvailableCourier.НоменклатураСсылка = #Temp_AvailablePickUp.НоменклатураСсылка,
+	#Temp_YourTimeInterval";
 
         public const string AvailableDateWithCount1 = @"
 Select 

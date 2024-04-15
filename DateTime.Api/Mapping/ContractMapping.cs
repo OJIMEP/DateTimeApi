@@ -88,7 +88,8 @@ namespace DateTimeService.Api.Mapping
                     Code = value.Code,
                     SalesCode = value.SalesCode,
                     Courier = value.Courier,
-                    Self = value.Self
+                    Self = value.Self,
+                    YourTimeInterval = value.YourTimeInterval
                 };
             }
 

@@ -15,5 +15,8 @@ namespace DateTimeService.Contracts.Responses
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull), JsonPropertyName("self")]
         public string? Self { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull), JsonPropertyName("interval")]
+        public string? YourTimeInterval { get; init; }
     }
 }

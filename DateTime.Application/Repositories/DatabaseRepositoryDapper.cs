@@ -73,12 +73,10 @@ namespace DateTimeService.Application.Repositories
             {
                 foreach (var codeItem in query.Codes)
                 {
-                    var resultElement = new AvailableDateElementResult
+                    var resultElement = new AvailableDateElementResult()
                     {
                         Code = codeItem.Article,
-                        SalesCode = codeItem.SalesCode,
-                        Courier = null,
-                        Self = null
+                        SalesCode = codeItem.SalesCode
                     };
 
                     AvailableDateRecord? dbRecord;
@@ -94,11 +92,14 @@ namespace DateTimeService.Application.Repositories
 
                     if (dbRecord is not null)
                     {
-                        resultElement.Courier = query.DeliveryTypes.Contains("courier") && dbRecord.Courier.Year != 3999
+                        resultElement.Courier = query.DeliveryTypes.Contains(Constants.CourierDelivery) && dbRecord.Courier.Year != 3999
                             ? dbRecord.Courier.ToString("yyyy-MM-ddTHH:mm:ss")
                             : null;
-                        resultElement.Self = query.DeliveryTypes.Contains("self") && dbRecord.Self.Year != 3999
+                        resultElement.Self = query.DeliveryTypes.Contains(Constants.Self) && dbRecord.Self.Year != 3999
                             ? dbRecord.Self.ToString("yyyy-MM-ddTHH:mm:ss")
+                            : null;
+                        resultElement.YourTimeInterval = query.DeliveryTypes.Contains(Constants.YourTimeDelivery) && dbRecord.YourTimeInterval != 0
+                            ? dbRecord.YourTimeInterval.ToString()
                             : null;
                     }
 

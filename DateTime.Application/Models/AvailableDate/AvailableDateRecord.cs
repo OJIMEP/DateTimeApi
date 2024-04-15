@@ -9,5 +9,7 @@
         public DateTime Courier { get; set; }
 
         public DateTime Self { get; set; }
+
+        public int YourTimeInterval { get; set; }
     }
 }

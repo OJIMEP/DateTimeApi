@@ -9,5 +9,14 @@
         public string? Courier { get; set; }
 
         public string? Self { get; set; }
+
+        public string? YourTimeInterval { get; set; }
+
+        public AvailableDateElementResult()
+        {
+            this.Courier = null;
+            this.Self = null;
+            this.YourTimeInterval = null;
+        }
     }
 }

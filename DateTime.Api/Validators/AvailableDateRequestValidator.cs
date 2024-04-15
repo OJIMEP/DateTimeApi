@@ -8,7 +8,7 @@ namespace DateTimeService.Api.Validators
     {
         public AvailableDateRequestValidator()
         {
-            string[] allowedDeliveryTypes = { Constants.CourierDelivery, Constants.Self };
+            string[] allowedDeliveryTypes = { Constants.CourierDelivery, Constants.Self, Constants.YourTimeDelivery };
 
             RuleFor(x => x.CityId)
                 .NotEmpty()

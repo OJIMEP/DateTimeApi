@@ -62,7 +62,8 @@ namespace DateTimeService.Application.Repositories
                             Article = dr.GetString(0),
                             Code = dr.GetString(1),
                             Courier = dr.GetDateTime(2).AddYears(-2000),
-                            Self = dr.GetDateTime(3).AddYears(-2000)
+                            Self = dr.GetDateTime(3).AddYears(-2000),
+                            YourTimeInterval = dr.GetInt32(4)
                         };
                         
                         dbResult.Add(record);
@@ -82,12 +83,10 @@ namespace DateTimeService.Application.Repositories
             {
                 foreach (var codeItem in query.Codes)
                 {
-                    var resultElement = new AvailableDateElementResult
+                    var resultElement = new AvailableDateElementResult()
                     {
                         Code = codeItem.Article,
-                        SalesCode = codeItem.SalesCode,
-                        Courier = null,
-                        Self = null
+                        SalesCode = codeItem.SalesCode
                     };
 
                     AvailableDateRecord? dbRecord;
@@ -103,11 +102,15 @@ namespace DateTimeService.Application.Repositories
 
                     if (dbRecord is not null)
                     {
-                        resultElement.Courier = query.DeliveryTypes.Contains("courier") && dbRecord.Courier.Year != 3999
+                        resultElement.Courier = query.DeliveryTypes.Contains(Constants.CourierDelivery) && dbRecord.Courier.Year != 3999
                             ? dbRecord.Courier.ToString("yyyy-MM-ddTHH:mm:ss")
                             : null;
-                        resultElement.Self = query.DeliveryTypes.Contains("self") && dbRecord.Self.Year != 3999
+                        resultElement.Self = query.DeliveryTypes.Contains(Constants.Self) && dbRecord.Self.Year != 3999
                             ? dbRecord.Self.ToString("yyyy-MM-ddTHH:mm:ss")
+                            : null;
+
+                        resultElement.YourTimeInterval = query.DeliveryTypes.Contains(Constants.YourTimeDelivery) && dbRecord.YourTimeInterval != 0
+                            ? dbRecord.YourTimeInterval.ToString()
                             : null;
                     }
 
@@ -264,7 +267,6 @@ namespace DateTimeService.Application.Repositories
             List<string> queryParts = new()
             {
                 query.CheckQuantity? AvailableDateQueries.AvailableDateWithCount1 : AvailableDateQueries.AvailableDate1,
-                //AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
                 dbConnection.UseAggregations ? AvailableDateQueries.AvailableDate2MinimumWarehousesCustom : AvailableDateQueries.AvailableDate2MinimumWarehousesBasic,
                 query.CheckQuantity ? AvailableDateQueries.AvailableDateWithCount3 : AvailableDateQueries.AvailableDate3,
                 AvailableDateQueries.AvailableDate4SourcesWithPrices,
@@ -292,7 +294,6 @@ namespace DateTimeService.Application.Repositories
 
             var DateMove = DateTime.Now.AddYears(2000);
 
-            //cmd.Parameters.AddWithValue("@P_CityCode", query.CityId);
             cmd.Parameters.AddWithValue("@P_DateTimeNow", DateMove);
             cmd.Parameters.AddWithValue("@P_DateTimePeriodBegin", DateMove.Date);
             cmd.Parameters.AddWithValue("@P_DateTimePeriodEnd", DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
@@ -306,38 +307,9 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.Add("@P_CityCode", SqlDbType.NVarChar, 10);
             cmd.Parameters["@P_CityCode"].Value = query.CityId;
 
-            //cmd.Parameters.Add("@P_DateTimeNow", SqlDbType.DateTime);
-            //cmd.Parameters["@P_DateTimeNow"].Value = DateMove;
-
-            //cmd.Parameters.Add("@P_DateTimePeriodBegin", SqlDbType.DateTime);
-            //cmd.Parameters["@P_DateTimePeriodBegin"].Value = DateMove.Date;
-
-            //cmd.Parameters.Add("@P_DateTimePeriodEnd", SqlDbType.DateTime);
-            //cmd.Parameters["@P_DateTimePeriodEnd"].Value = DateMove.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1);
-
-            //cmd.Parameters.Add("@P_TimeNow", SqlDbType.DateTime);
-            //cmd.Parameters["@P_TimeNow"].Value = new DateTime(2001, 1, 1, DateMove.Hour, DateMove.Minute, DateMove.Second);
-
-            //cmd.Parameters.Add("@P_EmptyDate", SqlDbType.DateTime);
-            //cmd.Parameters["@P_EmptyDate"].Value = new DateTime(2001, 1, 1, 0, 0, 0);
-
-            //cmd.Parameters.Add("@P_MaxDate", SqlDbType.DateTime);
-            //cmd.Parameters["@P_MaxDate"].Value = new DateTime(5999, 11, 11, 0, 0, 0);
-
-            //cmd.Parameters.Add("@P_DaysToShow", SqlDbType.Int);
-            //cmd.Parameters["@P_DaysToShow"].Value = 7;
-
-            //cmd.Parameters.Add("@P_ApplyShifting", SqlDbType.Int);
-            //cmd.Parameters["@P_ApplyShifting"].Value = (int)parameters1C.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров");
-
-            //cmd.Parameters.Add("@P_DaysToShift", SqlDbType.Int);
-            //cmd.Parameters["@P_DaysToShift"].Value = (int)parameters1C.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров");
-
             if (query.CheckQuantity)
             {
                 cmd.Parameters.AddWithValue("@P_StockPriority", (int)parameters1C.GetValue("ПриоритизироватьСток_64854"));
-                //cmd.Parameters.Add("@P_StockPriority", SqlDbType.Int);
-                //cmd.Parameters["@P_StockPriority"].Value = (int)parameters1C.GetValue("ПриоритизироватьСток_64854");
             }
 
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
