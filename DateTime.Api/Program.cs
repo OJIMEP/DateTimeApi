@@ -89,7 +89,7 @@ async Task OnAppStarting()
         RecurringJob.AddOrUpdate("ReloadDatabasesFromFiles", () => reloadDatabasesService.ReloadAsync(CancellationToken.None), "*/10 * * * * *"); //every 10 seconds
 
         var checkStatusService = app.Services.GetRequiredService<IDatabaseAvailabilityControl>();
-        RecurringJob.AddOrUpdate("CheckAndUpdateDatabasesStatus", () => checkStatusService.CheckAndUpdateDatabasesStatus(CancellationToken.None), Cron.Minutely());
+        RecurringJob.AddOrUpdate("CheckAndUpdateDatabasesStatus", () => checkStatusService.CheckAndUpdateDatabasesStatus(CancellationToken.None), Cron.MinuteInterval(5));
     }
     catch (Exception ex)
     {

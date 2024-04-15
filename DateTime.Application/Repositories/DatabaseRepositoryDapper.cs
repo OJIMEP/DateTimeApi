@@ -197,6 +197,7 @@ namespace DateTimeService.Application.Repositories
 
                 if (isBelpostDelivery)
                 {
+                    query.DeliveryType = Constants.Self;
                     query.PickupPoint = globalParameters.GetString("БелпочтаКодЦентральногоОтделения");
                 }
 
