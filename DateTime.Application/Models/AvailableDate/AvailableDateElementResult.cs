@@ -10,13 +10,13 @@
 
         public string? Self { get; set; }
 
-        public string? YourTimeInterval { get; set; }
+        public int YourTimeInterval { get; set; }
 
         public AvailableDateElementResult()
         {
             this.Courier = null;
             this.Self = null;
-            this.YourTimeInterval = null;
+            this.YourTimeInterval = 0;
         }
     }
 }

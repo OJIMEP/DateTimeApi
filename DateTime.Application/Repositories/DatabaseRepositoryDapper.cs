@@ -98,9 +98,9 @@ namespace DateTimeService.Application.Repositories
                         resultElement.Self = query.DeliveryTypes.Contains(Constants.Self) && dbRecord.Self.Year != 3999
                             ? dbRecord.Self.ToString("yyyy-MM-ddTHH:mm:ss")
                             : null;
-                        resultElement.YourTimeInterval = query.DeliveryTypes.Contains(Constants.YourTimeDelivery) && dbRecord.YourTimeInterval != 0
-                            ? dbRecord.YourTimeInterval.ToString()
-                            : null;
+                        resultElement.YourTimeInterval = query.DeliveryTypes.Contains(Constants.YourTimeDelivery)
+                            ? dbRecord.YourTimeInterval
+                            : 0;
                     }
 
                     if (String.IsNullOrEmpty(codeItem.Code))
