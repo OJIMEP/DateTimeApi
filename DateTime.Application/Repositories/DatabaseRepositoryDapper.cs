@@ -220,8 +220,8 @@ namespace DateTimeService.Application.Repositories
 
                     if (isBelpostDelivery)
                     {
-                        begin = begin.Date.AddDays(globalParameters.GetValue("БелпочтаМинимальныйСрокДоставки"));
-                        end = end.Date.AddDays(globalParameters.GetValue("БелпочтаМаксимальныйСрокДоставки"));
+                        begin = begin.AddDays(globalParameters.GetValue("БелпочтаМинимальныйСрокДоставки"));
+                        end = end.AddDays(globalParameters.GetValue("БелпочтаМаксимальныйСрокДоставки"));
                     }
 
                     result.Data.Add(new IntervalListElementResult
