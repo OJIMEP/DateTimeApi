@@ -652,7 +652,7 @@ From
     And (T1.ДатаСобытия = '2001-01-01 00:00:00')
 Where
     T1.Количество > 0 And
-    T1.Источник_RTRef = 0x000000E2 Or T1.Источник_RTRef = 0x00000150
+    T1.Источник_RTRef = 0x000000E2 Or T1.Источник_RTRef = 0x00000150 --склад, корректировка регистров
 
 Union All
 
@@ -666,7 +666,7 @@ Select
     T4.ДатаСобытия,
 	DATEADD(SECOND, DATEDIFF(SECOND, @P_EmptyDate, IsNull(#Temp_PlanningGroups.ГруппаПланированияДобавляемоеВремя, @P_EmptyDate)), T5.ДатаПрибытия),
     2,
-    0,
+    1,
     T5.СкладНазначения
 From
     #Temp_Remains T4 WITH(NOLOCK)
@@ -678,7 +678,7 @@ From
 	And #Temp_PlanningGroups.Основная = 1
 Where
     T4.Количество > 0 And
-    T4.Источник_RTRef = 0x00000141
+    T4.Источник_RTRef = 0x00000141 --заказ поставщику
 
 Union All
 
@@ -705,7 +705,7 @@ From
 Where
     T6.Количество > 0 
 	And NOT T6.Регистратор_RRRef IS NULL
-	And T6.Источник_RTRef = 0x00000153
+	And T6.Источник_RTRef = 0x00000153 --мегапрайсРегистрацияПрайса
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With TempSourcesGrouped AS
