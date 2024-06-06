@@ -1157,8 +1157,9 @@ Select
 From
 	#Temp_AvailableCourier 
 	FULL Join #Temp_AvailablePickUp 
-		On #Temp_AvailableCourier.НоменклатураСсылка = #Temp_AvailablePickUp.НоменклатураСсылка,
-	#Temp_YourTimeInterval";
+		On #Temp_AvailableCourier.НоменклатураСсылка = #Temp_AvailablePickUp.НоменклатураСсылка
+	LEFT OUTER JOIN #Temp_YourTimeInterval
+		On 1 = 1";
 
         public const string AvailableDateWithCount1 = @"
 Select 
