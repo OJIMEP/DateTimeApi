@@ -995,46 +995,47 @@ Select
 	Min(T4.БлижайшаяДата) AS БлижайшаяДата
 into #Temp_ClosestDatesByGoods
 From 
-(SELECT
-    T1.НоменклатураСсылка,
-    ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения,
-    MIN(ISNULL(T3.ДатаДоступности, T2.ДатаДоступности)) AS БлижайшаяДата
+(
+--(SELECT
+--    T1.НоменклатураСсылка,
+--   ISNULL(T3.СкладНазначения, T2.СкладНазначения) AS СкладНазначения,
+--    MIN(ISNULL(T3.ДатаДоступности, T2.ДатаДоступности)) AS БлижайшаяДата
 
-FROM
-    #Temp_Goods T1 WITH(NOLOCK)
-    LEFT OUTER JOIN #Temp_SourcesCorrectedDate T2 WITH(NOLOCK)
-    ON (T1.НоменклатураСсылка = T2.НоменклатураСсылка)
-    LEFT OUTER JOIN (
-        SELECT
-            T4.НоменклатураСсылка,
-            T4.ДатаДоступности,
-            T4.СкладНазначения,
-            T5.ДатаДоступности AS БлижайшаяДата
-        FROM
-            #Temp_Sources T4 WITH(NOLOCK)
-            LEFT OUTER JOIN Temp_ClosestDate T5 WITH(NOLOCK)
-            ON (T4.НоменклатураСсылка = T5.НоменклатураСсылка)
-            AND (T4.СкладНазначения = T5.СкладНазначения)
-            AND (T4.ТипИсточника = 1 Or T4.ТипИсточника = 4)
-    ) T3 ON (T1.НоменклатураСсылка = T3.НоменклатураСсылка)
-    AND (
-        T3.ДатаДоступности <= DATEADD(DAY, {4}, T3.БлижайшаяДата) --это параметр КоличествоДнейАнализа
-    )
-	Where T1.Количество = 1
-GROUP BY
-    T1.НоменклатураСсылка,
-    ISNULL(T3.СкладНазначения, T2.СкладНазначения)
-Union ALL
+--FROM
+--    #Temp_Goods T1 WITH(NOLOCK)
+--    LEFT OUTER JOIN #Temp_SourcesCorrectedDate T2 WITH(NOLOCK)
+--    ON (T1.НоменклатураСсылка = T2.НоменклатураСсылка)
+--    LEFT OUTER JOIN (
+--        SELECT
+--            T4.НоменклатураСсылка,
+--            T4.ДатаДоступности,
+--            T4.СкладНазначения,
+--            T5.ДатаДоступности AS БлижайшаяДата
+--        FROM
+--            #Temp_Sources T4 WITH(NOLOCK)
+--            LEFT OUTER JOIN Temp_ClosestDate T5 WITH(NOLOCK)
+--            ON (T4.НоменклатураСсылка = T5.НоменклатураСсылка)
+--            AND (T4.СкладНазначения = T5.СкладНазначения)
+--            AND (T4.ТипИсточника = 1 Or T4.ТипИсточника = 4)
+--    ) T3 ON (T1.НоменклатураСсылка = T3.НоменклатураСсылка)
+--    AND (
+--        T3.ДатаДоступности <= DATEADD(DAY, {4}, T3.БлижайшаяДата) --это параметр КоличествоДнейАнализа
+--    )
+--	Where T1.Количество = 1
+--GROUP BY
+--    T1.НоменклатураСсылка,
+--    ISNULL(T3.СкладНазначения, T2.СкладНазначения)
+--Union ALL
 Select 
-	#Temp_Goods.НоменклатураСсылка,
-	#Temp_AvailableGoods.СкладНазначения,
-	Min(#Temp_AvailableGoods.ДатаДоступности)
+	#Temp_Goods.НоменклатураСсылка AS НоменклатураСсылка,
+	#Temp_AvailableGoods.СкладНазначения AS СкладНазначения,
+	Min(#Temp_AvailableGoods.ДатаДоступности) AS БлижайшаяДата
 From #Temp_Goods With (NOLOCK)
 	Left Join #Temp_AvailableGoods With (NOLOCK) 
 		On #Temp_Goods.НоменклатураСсылка = #Temp_AvailableGoods.Номенклатура
 		AND #Temp_Goods.Количество <= #Temp_AvailableGoods.Количество
-Where
-	#Temp_Goods.Количество > 1
+--Where
+--	#Temp_Goods.Количество > 1
 Group By
 	#Temp_Goods.НоменклатураСсылка,
 	#Temp_AvailableGoods.СкладНазначения) T4
