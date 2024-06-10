@@ -1,5 +1,4 @@
-﻿using DateTimeService.Application;
-using DateTimeService.Contracts.Requests;
+﻿using DateTimeService.Contracts.Requests;
 using FluentValidation;
 
 namespace DateTimeService.Api.Validators
@@ -8,19 +7,9 @@ namespace DateTimeService.Api.Validators
     {
         public AvailableDateRequestValidator()
         {
-            string[] allowedDeliveryTypes = { Constants.CourierDelivery, Constants.Self, Constants.YourTimeDelivery };
-
             RuleFor(x => x.CityId)
                 .NotEmpty()
                 .WithMessage("Должен быть указан код города");
-
-            RuleFor(x => x.DeliveryTypes)
-                .NotEmpty()
-                .WithMessage("Должен быть указан хоть один тип доставки");
-
-            RuleFor(x => x.DeliveryTypes)
-                .Must(arr => arr.All(v => allowedDeliveryTypes.Contains(v)))
-                .WithMessage("Указан некорректный тип доставки");
 
             RuleFor(x => x)
                 .Must(x => x.CodeItems.All( item => item.Quantity == 0))

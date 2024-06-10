@@ -92,15 +92,13 @@ namespace DateTimeService.Application.Repositories
 
                     if (dbRecord is not null)
                     {
-                        resultElement.Courier = query.DeliveryTypes.Contains(Constants.CourierDelivery) && dbRecord.Courier.Year != 3999
+                        resultElement.Courier = dbRecord.Courier.Year != 3999
                             ? dbRecord.Courier.ToString("yyyy-MM-ddTHH:mm:ss")
                             : null;
-                        resultElement.Self = query.DeliveryTypes.Contains(Constants.Self) && dbRecord.Self.Year != 3999
+                        resultElement.Self = dbRecord.Self.Year != 3999
                             ? dbRecord.Self.ToString("yyyy-MM-ddTHH:mm:ss")
                             : null;
-                        resultElement.YourTimeInterval = query.DeliveryTypes.Contains(Constants.YourTimeDelivery)
-                            ? dbRecord.YourTimeInterval
-                            : 0;
+                        resultElement.YourTimeInterval = dbRecord.YourTimeInterval;
                     }
 
                     if (String.IsNullOrEmpty(codeItem.Code))

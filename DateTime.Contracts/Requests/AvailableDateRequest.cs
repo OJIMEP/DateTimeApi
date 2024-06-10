@@ -11,8 +11,8 @@ namespace DateTimeService.Contracts.Requests
         [Required, JsonPropertyName("check_quantity")]
         public bool CheckQuantity { get; init; }
 
-        [Required, JsonPropertyName("delivery_types")]
-        public required string[] DeliveryTypes { get; init; }
+        [JsonPropertyName("delivery_types")]
+        public string[]? DeliveryTypes { get; init; }
 
         [Required, MinLength(1), JsonPropertyName("codes")]
         public required IEnumerable<CodeItemRequest> CodeItems { get; init; } 
