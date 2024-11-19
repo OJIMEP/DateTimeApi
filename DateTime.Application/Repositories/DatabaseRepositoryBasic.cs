@@ -114,11 +114,11 @@ namespace DateTimeService.Application.Repositories
 
                     if (String.IsNullOrEmpty(codeItem.Code))
                     {
-                        resultDict.Data.Add(codeItem.Article, resultElement);
+                        resultDict.Data.TryAdd(codeItem.Article, resultElement);
                     }
                     else
                     {
-                        resultDict.Data.Add($"{codeItem.Article}_{codeItem.SalesCode}", resultElement);
+                        resultDict.Data.TryAdd($"{codeItem.Article}_{codeItem.SalesCode}", resultElement);
                     }
                 }
             }

@@ -33,7 +33,7 @@ namespace DateTimeService.Application.Repositories
 
                 foreach (var item in dataFromCache.Data)
                 {
-                    result.Data.Add(item.Key, item.Value);
+                    result.Data.TryAdd(item.Key, item.Value);
                 }
 
                 if (result.Data.Count == query.Codes.Count)
@@ -59,7 +59,7 @@ namespace DateTimeService.Application.Repositories
             {
                 foreach (var item in taskResult.Data)
                 {
-                    result.Data.Add(item.Key, item.Value);
+                    result.Data.TryAdd(item.Key, item.Value);
                 }
 
                 if (!taskResult.WithQuantity)

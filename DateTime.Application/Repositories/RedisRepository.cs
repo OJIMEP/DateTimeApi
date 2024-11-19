@@ -63,7 +63,7 @@ namespace DateTimeService.Application.Repositories
                 if (value is not null)
                 {
                     var key = queryItems[i].CacheKey;
-                    result.Data.Add(key, value);
+                    result.Data.TryAdd(key, value);
                 }
             }
 
