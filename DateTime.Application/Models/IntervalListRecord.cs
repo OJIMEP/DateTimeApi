@@ -6,5 +6,6 @@
         public DateTime EndDate { get; set; }
         public int OrdersCount { get; set; }
         public int Bonus { get; set; }
+        public string IntervalType { get; set; }
     }
 }

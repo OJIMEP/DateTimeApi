@@ -45,7 +45,9 @@ Select
 	ЗоныДоставки._ParentIDRRef As ЗонаДоставкиРодительСсылка,
 	ЗоныДоставкиРодитель._Description AS ЗонаДоставкиРодительНаименование,
     ЗоныДоставки._Fld31473 AS КоэффициентЗоныДоставки,
-	Геозона._IDRRef As Геозона
+	Геозона._IDRRef As Геозона,
+    Геозона._Fld32161 AS ПланируемыеИнтервалыС,
+	Геозона._Fld32162 AS ПланируемыеИнтервалыПо
 Into #Temp_GeoData
 From dbo._Reference114 Геозона With (NOLOCK)
 	Inner Join _Reference114_VT23370 With (NOLOCK)
@@ -1347,10 +1349,12 @@ DATEADD(
     ) AS ВремяОкончания,
 	Sum(#Temp_IntervalsAll.КоличествоЗаказовЗаИнтервалВремени) AS КоличествоЗаказовЗаИнтервалВремени, 
     Case when ГеоЗонаВременныеИнтервалы._Fld27342 = 0x01 then 1 else 0 End AS Стимулировать,
-#Temp_IntervalsAll.Период,
-#Temp_IntervalsAll.ГруппаПланирования,
-#Temp_IntervalsAll.Геозона,
-#Temp_IntervalsAll.Приоритет
+    Case when ГеоЗонаВременныеИнтервалы._Fld32163 = 0x01 then 1 else 0 End AS ЗагруженныйБудни,
+	Case when ГеоЗонаВременныеИнтервалы._Fld32164 = 0x01 then 1 else 0 End AS ЗагруженныйВыходные,
+    #Temp_IntervalsAll.Период,
+    #Temp_IntervalsAll.ГруппаПланирования,
+    #Temp_IntervalsAll.Геозона,
+    #Temp_IntervalsAll.Приоритет
 into #Temp_Intervals
 from #Temp_IntervalsAll
 	Inner Join _Reference114_VT25126 ГеоЗонаВременныеИнтервалы With (NOLOCK)
@@ -1372,7 +1376,9 @@ Group By
 	#Temp_IntervalsAll.ГруппаПланирования,
 	#Temp_IntervalsAll.Геозона,
 	#Temp_IntervalsAll.Приоритет,
-    ГеоЗонаВременныеИнтервалы._Fld27342
+    ГеоЗонаВременныеИнтервалы._Fld27342,
+    ГеоЗонаВременныеИнтервалы._Fld32163,
+	ГеоЗонаВременныеИнтервалы._Fld32164
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}'), KEEP PLAN, KEEPFIXED PLAN);
 
 INsert into #Temp_Intervals
@@ -1392,11 +1398,13 @@ DATEADD(
         #Temp_IntervalsAll.Период
     ) AS ВремяОкончания,
 	Sum(#Temp_IntervalsAll.КоличествоЗаказовЗаИнтервалВремени) AS КоличествоЗаказовЗаИнтервалВремени,
-Case when ГеоЗонаВременныеИнтервалы._Fld27342 = 0x01 then 1 else 0 End AS Стимулировать,
-#Temp_IntervalsAll.Период,
-#Temp_IntervalsAll.ГруппаПланирования,
-#Temp_IntervalsAll.Геозона,
-#Temp_IntervalsAll.Приоритет
+    Case when ГеоЗонаВременныеИнтервалы._Fld27342 = 0x01 then 1 else 0 End AS Стимулировать,
+    Case when ГеоЗонаВременныеИнтервалы._Fld32163 = 0x01 then 1 else 0 End AS ЗагруженныйБудни,
+	Case when ГеоЗонаВременныеИнтервалы._Fld32164 = 0x01 then 1 else 0 End AS ЗагруженныйВыходные,
+    #Temp_IntervalsAll.Период,
+    #Temp_IntervalsAll.ГруппаПланирования,
+    #Temp_IntervalsAll.Геозона,
+    #Temp_IntervalsAll.Приоритет
 from #Temp_IntervalsAll
 	Inner Join _Reference114_VT25126 ГеоЗонаВременныеИнтервалы With (NOLOCK)
 		On #Temp_IntervalsAll.Геозона = ГеоЗонаВременныеИнтервалы._Reference114_IDRRef
@@ -1418,7 +1426,9 @@ Group By
 	#Temp_IntervalsAll.ГруппаПланирования,
 	#Temp_IntervalsAll.Геозона,
 	#Temp_IntervalsAll.Приоритет,
-    ГеоЗонаВременныеИнтервалы._Fld27342
+    ГеоЗонаВременныеИнтервалы._Fld27342,
+    ГеоЗонаВременныеИнтервалы._Fld32163,
+	ГеоЗонаВременныеИнтервалы._Fld32164
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}'), KEEP PLAN, KEEPFIXED PLAN); 
 
 INsert into #Temp_Intervals
@@ -1438,7 +1448,9 @@ DATEADD(
         #Temp_IntervalsAll.Период
     ) AS ВремяОкончания,
 	Sum(#Temp_IntervalsAll.КоличествоЗаказовЗаИнтервалВремени) AS КоличествоЗаказовЗаИнтервалВремени,
-Case when ГеоЗонаВременныеИнтервалы._Fld27342 = 0x01 then 1 else 0 End AS Стимулировать,
+    Case when ГеоЗонаВременныеИнтервалы._Fld27342 = 0x01 then 1 else 0 End AS Стимулировать,
+    Case when ГеоЗонаВременныеИнтервалы._Fld32163 = 0x01 then 1 else 0 End AS ЗагруженныйБудни,
+	Case when ГеоЗонаВременныеИнтервалы._Fld32164 = 0x01 then 1 else 0 End AS ЗагруженныйВыходные,
     #Temp_IntervalsAll.Период,
     #Temp_IntervalsAll.ГруппаПланирования,
     #Temp_IntervalsAll.Геозона,
@@ -1460,7 +1472,9 @@ Group By
 	#Temp_IntervalsAll.ГруппаПланирования,
 	#Temp_IntervalsAll.Геозона,
 	#Temp_IntervalsAll.Приоритет,
-    ГеоЗонаВременныеИнтервалы._Fld27342
+    ГеоЗонаВременныеИнтервалы._Fld27342,
+    ГеоЗонаВременныеИнтервалы._Fld32163,
+	ГеоЗонаВременныеИнтервалы._Fld32164
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), KEEP PLAN, KEEPFIXED PLAN);
 
 Insert into #Temp_Intervals
@@ -1481,6 +1495,8 @@ Select
     ) AS ВремяОкончания,
 	Sum(#Temp_IntervalsAll.КоличествоЗаказовЗаИнтервалВремени) AS КоличествоЗаказовЗаИнтервалВремени,
 	0 AS Стимулировать,
+    0 AS ЗагруженныйБудни,
+	0 AS ЗагруженныйВыходные,
     #Temp_IntervalsAll.Период,
     #Temp_IntervalsAll.ГруппаПланирования,
     #Temp_IntervalsAll.Геозона,
@@ -1524,10 +1540,12 @@ DATEADD(
     ) AS ВремяОкончания,
 	Sum(#Temp_IntervalsAll.КоличествоЗаказовЗаИнтервалВремени) AS КоличествоЗаказовЗаИнтервалВремени,
 	0 AS Стимулировать,
-#Temp_IntervalsAll.Период,
-#Temp_IntervalsAll.ГруппаПланирования,
-#Temp_IntervalsAll.Геозона,
-#Temp_IntervalsAll.Приоритет
+    0 AS ЗагруженныйБудни,
+	0 AS ЗагруженныйВыходные,
+    #Temp_IntervalsAll.Период,
+    #Temp_IntervalsAll.ГруппаПланирования,
+    #Temp_IntervalsAll.Геозона,
+    #Temp_IntervalsAll.Приоритет
 from #Temp_IntervalsAll
 	Inner Join _Reference114_VT30388 ГеоЗонаВременныеИнтервалы With (NOLOCK)
 		On #Temp_IntervalsAll.Геозона = ГеоЗонаВременныеИнтервалы._Reference114_IDRRef
@@ -1571,10 +1589,12 @@ Select
     ) AS ВремяОкончания,
 	Sum(#Temp_IntervalsAll.КоличествоЗаказовЗаИнтервалВремени) AS КоличествоЗаказовЗаИнтервалВремени, 
     0 AS Стимулировать,
-#Temp_IntervalsAll.Период,
-#Temp_IntervalsAll.ГруппаПланирования,
-#Temp_IntervalsAll.Геозона,
-#Temp_IntervalsAll.Приоритет
+    0 AS ЗагруженныйБудни,
+	0 AS ЗагруженныйВыходные,
+    #Temp_IntervalsAll.Период,
+    #Temp_IntervalsAll.ГруппаПланирования,
+    #Temp_IntervalsAll.Геозона,
+    #Temp_IntervalsAll.Приоритет
 From #Temp_IntervalsAll
 	INNER JOIN _Reference114_VT30388 ГеоЗонаВременныеИнтервалы With (NOLOCK)
 		On #Temp_IntervalsAll.Геозона = ГеоЗонаВременныеИнтервалы._Reference114_IDRRef
@@ -1630,7 +1650,10 @@ select
 	#Temp_Intervals.КоличествоЗаказовЗаИнтервалВремени
 	) 
 	AS OrdersCount,
-    #Temp_Intervals.Стимулировать As Bonus
+    #Temp_Intervals.Стимулировать As Bonus,
+    #Temp_Intervals.Период,
+	#Temp_Intervals.ЗагруженныйБудни,
+	#Temp_Intervals.ЗагруженныйВыходные
 Into #Temp_IntervalsWithOutShifting
 From
 #Temp_Intervals With (NOLOCK)
@@ -1646,7 +1669,10 @@ Group By
 	#Temp_Intervals.Период,
 	#Temp_TimeService.ВремяВыполнения,
     #Temp_PlanningGroups.СреднееВремяНаПереезд,
-    #Temp_Intervals.Стимулировать
+    #Temp_Intervals.Стимулировать,
+    #Temp_Intervals.Период,
+	#Temp_Intervals.ЗагруженныйБудни,
+	#Temp_Intervals.ЗагруженныйВыходные
 Having SUM(#Temp_Intervals.КоличествоЗаказовЗаИнтервалВремени) > (#Temp_TimeService.ВремяВыполнения + #Temp_PlanningGroups.СреднееВремяНаПереезд)
 
 Union
@@ -1668,7 +1694,10 @@ SELECT
         date
     ) As EndDate,
 	0 AS OrdersCount,
-    Case when ГеоЗонаВременныеИнтервалы._Fld27342 = 0x01 then 1 else 0 End AS Bonus
+    Case when ГеоЗонаВременныеИнтервалы._Fld27342 = 0x01 then 1 else 0 End AS Bonus,
+    T.date,
+	Case when ГеоЗонаВременныеИнтервалы._Fld32163 = 0x01 then 1 else 0 End,
+	Case when ГеоЗонаВременныеИнтервалы._Fld32164 = 0x01 then 1 else 0 End
 FROM
     T 
 	Inner Join _Reference114_VT25126 AS ГеоЗонаВременныеИнтервалы  With (NOLOCK) 
@@ -1686,7 +1715,10 @@ Select
 	#Temp_AvailablePickUp.ВремяНачала As StartDate,
 	#Temp_AvailablePickUp.ВремяОкончания As EndDate,
 	0 As OrdersCount,
-    0 As Bonus
+    0 As Bonus,
+    @P_EmptyDate,
+	0,
+	0
 From #Temp_AvailablePickUp
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), KEEP PLAN, KEEPFIXED PLAN);
 
@@ -1702,12 +1734,53 @@ inner join #Temp_IntervalsWithOutShifting as IntervalsWithOutShifting
 		on IntervalsWithOutShifting.StartDate between ПрослеживаемыеТоварныеКатегории._period AND DateAdd(DAY, @P_DaysToShift, ПрослеживаемыеТоварныеКатегории._Period)
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
-select IntervalsWithOutShifting.* 
+select 
+	IntervalsWithOutShifting.Период,
+	IntervalsWithOutShifting.StartDate,
+	IntervalsWithOutShifting.EndDate,
+	IntervalsWithOutShifting.Bonus,
+	Case When ДанныеКалендаря._Fld14264RRef in (0xA826C921F976C5EE45F87E7C18D0A858, 0xAC0042F13CCF80E7466E4329C5762C35) --рабочий, предпразничный
+		Then IntervalsWithOutShifting.ЗагруженныйБудни
+		Else IntervalsWithOutShifting.ЗагруженныйВыходные
+	End As ЗагруженныйИнтервал,
+	IsNull(ГеоЗоны.ПланируемыеИнтервалыС, 0) As ПланируемыеИнтервалыС,
+	IsNull(ГеоЗоны.ПланируемыеИнтервалыПо, 0) ПланируемыеИнтервалыПо
+Into #Temp_AvailableIntervals
 from #Temp_IntervalsWithOutShifting as IntervalsWithOutShifting  
-left join #Temp_UnavailableDates as UnavailableDates 
-	on IntervalsWithOutShifting.StartDate = UnavailableDates.StartDate
+	left join #Temp_UnavailableDates as UnavailableDates 
+		on IntervalsWithOutShifting.StartDate = UnavailableDates.StartDate
+	left join _InfoRg14260 ДанныеКалендаря 
+		On IntervalsWithOutShifting.Период = ДанныеКалендаря._Fld14262
+		And ДанныеКалендаря._Fld14261RRef = 0x8265002522BD9FAE11E4C0CE607941B6 -- календарь = Республика Беларусь
+	left join #Temp_GeoData ГеоЗоны
+		On 1 = 1
 where 
 	UnavailableDates.StartDate is NULL
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
+Select Top 1
+	ДоступныеИнтервалы.Период
+Into #Temp_FirstDate
+From #Temp_AvailableIntervals ДоступныеИнтервалы	
+Order By ДоступныеИнтервалы.Период
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
+Select
+	ДоступныеИнтервалы.StartDate,
+	ДоступныеИнтервалы.EndDate,
+	ДоступныеИнтервалы.Bonus,
+	Case When ДоступныеИнтервалы.ЗагруженныйИнтервал = 1
+		And DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 <= @LoadedIntervalsDays 
+			Then 'Loaded'
+		When DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 >= ДоступныеИнтервалы.ПланируемыеИнтервалыС
+			And DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 <= ДоступныеИнтервалы.ПланируемыеИнтервалыПо
+			Then 'Planned'
+		Else 
+			'Basic'
+	End As IntervalType	
+From #Temp_AvailableIntervals ДоступныеИнтервалы
+	Inner Join #Temp_FirstDate ПерваяДата
+		On 1 = 1
 Order by StartDate
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 ";

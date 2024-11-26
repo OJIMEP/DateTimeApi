@@ -159,6 +159,7 @@ namespace DateTimeService.Application.Repositories
 
                 var globalParameters = await GetGlobalParameters(connection, token);
                 var isBelpostDelivery = query.PickupPointType == Constants.BelpostPickupPoint;
+                var courierDelivery = query.DeliveryType == Constants.CourierDelivery;
 
                 if (isBelpostDelivery)
                 {
@@ -178,7 +179,12 @@ namespace DateTimeService.Application.Repositories
                     {
                         var begin = dr.GetDateTime(0).AddYears(-2000);
                         var end = dr.GetDateTime(1).AddYears(-2000);
-                        var bonus = dr.GetInt32(3) == 1;
+                        var bonus = dr.GetInt32(2) == 1;
+                        var intervalType = "";
+                        if (courierDelivery)
+                        {
+                            intervalType = dr.GetString(3);
+                        }
 
                         if (isBelpostDelivery)
                         {
@@ -190,7 +196,8 @@ namespace DateTimeService.Application.Repositories
                         {
                             Begin = begin,
                             End = end,
-                            Bonus = bonus
+                            Bonus = bonus,
+                            IntervalType = intervalType
                         });
 
                         if (isBelpostDelivery) { break; }
@@ -372,6 +379,7 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
             cmd.Parameters.AddWithValue("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             cmd.Parameters.AddWithValue("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
+            cmd.Parameters.AddWithValue("@LoadedIntervalsDays", (int)globalParameters.GetValue("ДнейСЗагруженнымиИнтерваламиДоставкиОтДатыДоступностиЗаказа"));
 
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 

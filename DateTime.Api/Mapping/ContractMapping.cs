@@ -104,7 +104,8 @@ namespace DateTimeService.Api.Mapping
                 {
                     Begin = item.Begin,
                     End = item.End,
-                    Bonus = item.Bonus
+                    Bonus = item.Bonus,
+                    IntervalType = item.IntervalType
                 }).ToList()
             };
 

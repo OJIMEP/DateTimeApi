@@ -12,5 +12,8 @@ namespace DateTimeService.Contracts.Responses
 
         [JsonPropertyName("bonus")]
         public bool Bonus { get; set; }
+
+        [JsonPropertyName("type")]
+        public string IntervalType { get; set; }
     }
 }

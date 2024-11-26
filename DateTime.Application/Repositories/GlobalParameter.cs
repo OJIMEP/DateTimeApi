@@ -77,6 +77,11 @@ namespace DateTimeService.Application.Repositories
                 new GlobalParameter
                 {
                     Name = "БелпочтаКодЦентральногоОтделения"
+                },
+                new GlobalParameter
+                {
+                    Name = "ДнейСЗагруженнымиИнтерваламиДоставкиОтДатыДоступностиЗаказа",
+                    DefaultDouble = 0
                 }
             };
 

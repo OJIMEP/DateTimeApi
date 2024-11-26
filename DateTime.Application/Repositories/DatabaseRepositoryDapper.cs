@@ -215,6 +215,11 @@ namespace DateTimeService.Application.Repositories
                     var begin = element.StartDate.AddYears(-2000);
                     var end = element.EndDate.AddYears(-2000);
                     var bonus = element.Bonus == 1;
+                    var intervalType = "";
+                    if (query.DeliveryType == Constants.CourierDelivery)
+                    {
+                        intervalType = element.IntervalType;
+                    }
 
                     if (isBelpostDelivery)
                     {
@@ -226,7 +231,8 @@ namespace DateTimeService.Application.Repositories
                     {
                         Begin = begin,
                         End = end,
-                        Bonus = bonus
+                        Bonus = bonus,
+                        IntervalType = intervalType
                     });
 
                     if (isBelpostDelivery) { break; }
@@ -348,6 +354,7 @@ namespace DateTimeService.Application.Repositories
             queryParameters.Add("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
             queryParameters.Add("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             queryParameters.Add("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
+            queryParameters.Add("@LoadedIntervalsDays", (int)globalParameters.GetValue("ДнейСЗагруженнымиИнтерваламиДоставкиОтДатыДоступностиЗаказа"));
 
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
