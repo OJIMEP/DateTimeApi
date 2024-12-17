@@ -515,17 +515,17 @@ GROUP BY T1.НоменклатураСсылка,
 T1.СкладНазначения
 )
 SELECT
-            T4.НоменклатураСсылка,
-            Min(T4.ДатаДоступности)AS ДатаДоступности,
-            T4.СкладНазначения
-		Into #Temp_T3
-        FROM
-            #Temp_Sources T4 WITH(NOLOCK)
-            INNER JOIN Temp_ClosestDate T5 WITH(NOLOCK)
-            ON (T4.НоменклатураСсылка = T5.НоменклатураСсылка)
-            AND (T4.СкладНазначения = T5.СкладНазначения)
-            AND (T4.ТипИсточника = 1)
-			AND T4.ДатаДоступности <= DATEADD(DAY, {4}, T5.ДатаДоступности)
+    T4.НоменклатураСсылка,
+    Min(T4.ДатаДоступности)AS ДатаДоступности,
+    T4.СкладНазначения
+Into #Temp_T3
+FROM
+    #Temp_Sources T4 WITH(NOLOCK)
+    INNER JOIN Temp_ClosestDate T5 WITH(NOLOCK)
+    ON (T4.НоменклатураСсылка = T5.НоменклатураСсылка)
+		AND (T4.СкладНазначения = T5.СкладНазначения)
+		AND (T4.ТипИсточника = 1)
+		AND T4.ДатаДоступности <= DATEADD(DAY, {4}, T5.ДатаДоступности)
 Group by T4.НоменклатураСсылка, T4.СкладНазначения
 OPTION (HASH GROUP, KEEP PLAN, KEEPFIXED PLAN);
 

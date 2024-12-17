@@ -1008,7 +1008,8 @@ FROM
     ON (T1.НоменклатураСсылка = T2.НоменклатураСсылка)
     AND (T1.ДатаДоступности = T2.ДатаДоступности)
     AND (T1.СкладНазначения = T2.СкладНазначения)
-    AND (T1.ТипИсточника = 3)
+    --AND (T1.ТипИсточника = 3)
+Where T1.ТипИсточника = 3 -- Смещение даты доступности в зависимости от лучшей цены нужно только для мегапрайса
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With Temp_ClosestDate AS
@@ -1033,11 +1034,15 @@ From
 Select 
 	#Temp_Goods.НоменклатураСсылка AS НоменклатураСсылка,
 	#Temp_AvailableGoods.СкладНазначения AS СкладНазначения,
-	Min(#Temp_AvailableGoods.ДатаДоступности) AS БлижайшаяДата
+	Min(IsNull(ЛучшиеЦеныПрайсов.ДатаДоступности, #Temp_AvailableGoods.ДатаДоступности)) AS БлижайшаяДата
 From #Temp_Goods With (NOLOCK)
 	Left Join #Temp_AvailableGoods With (NOLOCK) 
 		On #Temp_Goods.НоменклатураСсылка = #Temp_AvailableGoods.Номенклатура
 		AND #Temp_Goods.Количество <= #Temp_AvailableGoods.Количество
+    Left Join #Temp_SourcesCorrectedDate ЛучшиеЦеныПрайсов With (NOLOCK)
+		On ЛучшиеЦеныПрайсов.НоменклатураСсылка = #Temp_AvailableGoods.Номенклатура
+		And ЛучшиеЦеныПрайсов.СкладНазначения = #Temp_AvailableGoods.СкладНазначения
+		And #Temp_Goods.Количество = 1 -- Применяем смещение даты только для источников прайсов и количества = 1
 Group By
 	#Temp_Goods.НоменклатураСсылка,
 	#Temp_AvailableGoods.СкладНазначения) T4
