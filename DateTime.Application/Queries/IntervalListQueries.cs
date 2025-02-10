@@ -1775,12 +1775,12 @@ Select
 	ДоступныеИнтервалы.Bonus,
 	Case When ДоступныеИнтервалы.ЗагруженныйИнтервал = 1
 		And DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 <= @LoadedIntervalsDays 
-			Then 'Loaded'
+			Then 'loaded'
 		When DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 >= ДоступныеИнтервалы.ПланируемыеИнтервалыС
 			And DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 <= ДоступныеИнтервалы.ПланируемыеИнтервалыПо
-			Then 'Planned'
+			Then 'planned'
 		Else 
-			'Basic'
+			'basic'
 	End As IntervalType	
 From #Temp_AvailableIntervals ДоступныеИнтервалы
 	Inner Join #Temp_FirstDate ПерваяДата
