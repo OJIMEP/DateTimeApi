@@ -8,7 +8,7 @@ Select
 	Склады._Fld19544 AS ERPКодСклада
 Into #Temp_PickupPoints
 From 
-	dbo._Reference226 Склады 
+	dbo._Reference226 Склады WITH(NOLOCK)
 Where Склады._Fld19544 in({0});
  
 Select
@@ -210,7 +210,7 @@ From
 		AND (ГруппыПланирования._Fld23301RRef = Номенклатура.Габариты OR (Номенклатура.Габариты = 0xAC2CBF86E693F63444670FFEB70264EE AND ГруппыПланирования._Fld23301RRef= 0xAD3F7F5FC4F15DAD4F693CAF8365EC0D) ) --габариты
 		AND ГруппыПланирования._Marked = 0x00
 		AND Номенклатура.СкладПВЗСсылка Is Null
-	Inner Join dbo._Reference23294 ПодчиненнаяГП
+	Inner Join dbo._Reference23294 ПодчиненнаяГП WITH(NOLOCK)
 			On  ГруппыПланирования._Fld26526RRef = ПодчиненнаяГП._IDRRef
 Where 
 	Номенклатура.СкладПВЗСсылка IS NULL
@@ -222,7 +222,7 @@ Select
     ЦеныТолькоПрайсы._Fld21410_RTRef AS Регистратор_RTRef,
     ЦеныТолькоПрайсы._Fld21410_RRRef AS Регистратор_RRRef
 Into #Temp_Megaprices
-From _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
+From _AccumRg21407 ЦеныТолькоПрайсы With (NOLOCK)
 	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
 		ON ЦеныТолькоПрайсы._Fld21443RRef = ExchangeRates._Fld14558RRef
 		AND ЦеныТолькоПрайсы._Fld21410_RTRef = 0x00000153 --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса
@@ -240,7 +240,7 @@ Select Distinct
 	Цены._Fld21410_RRRef AS РегистраторЦен_RRRef,
 	Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 AS Цена
 Into #Temp_Prices
-From _AccumRg21407 Цены With (READCOMMITTED)
+From _AccumRg21407 Цены With (NOLOCK)
 	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
 		ON Цены._Fld21443RRef = ExchangeRates._Fld14558RRef
 		AND Цены._Fld21410_RTRef IN(0x00000141,0x00000153)  --Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса, ЗаказПоставщику
@@ -272,7 +272,7 @@ SELECT
     SUM(T2._Fld21411) - SUM(T2._Fld21412) AS Количество
 Into #Temp_Remains
 FROM
-    dbo._AccumRgT21444 T2 WITH (READCOMMITTED)
+    dbo._AccumRgT21444 T2 WITH (NOLOCK)
 	INNER JOIN FilteredGoods FG 
 	ON T2._Fld21408RRef = FG.НоменклатураСсылка
 		AND T2._Period = '5999-11-01 00:00:00'
@@ -310,7 +310,7 @@ SELECT Distinct
     T1._Fld23833RRef AS СкладНазначения
 Into #Temp_WarehouseDates
 FROM
-    dbo._InfoRg23830 T1 With (READCOMMITTED)
+    dbo._InfoRg23830 T1 With (NOLOCK)
 	Inner Join #Temp_Remains With (NOLOCK)
 	ON T1._Fld23831RRef = #Temp_Remains.СкладИсточника
 	AND T1._Fld23832 = #Temp_Remains.ДатаСобытия
@@ -330,7 +330,7 @@ SELECT
 	MIN(T1._Fld23834) AS ДатаПрибытия 
 Into #Temp_MinimumWarehouseDates
 FROM
-    dbo._InfoRg23830 T1 With (READCOMMITTED{7})
+    dbo._InfoRg23830 T1 With (NOLOCK{7})
     Inner Join SourceWarehouses On T1._Fld23831RRef = SourceWarehouses.СкладИсточника
 WHERE
     T1._Fld23833RRef IN (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
@@ -351,7 +351,7 @@ SELECT
 	MIN(T1.ДатаПрибытия) AS ДатаПрибытия  
 Into #Temp_MinimumWarehouseDates
 FROM
-    [dbo].[WarehouseDatesAggregate] T1 With (READCOMMITTED{7})
+    [dbo].[WarehouseDatesAggregate] T1 With (NOLOCK{7})
     Inner Join SourceWarehouses On T1.СкладИсточника = SourceWarehouses.СкладИсточника
 WHERE
     T1.СкладНазначения IN (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
@@ -819,14 +819,14 @@ Select
 INTO #Temp_PickupWorkingHours
 From 
 	#Temp_Dates
-	Inner Join dbo._Reference226 Склады 
+	Inner Join dbo._Reference226 Склады WITH(NOLOCK)
 		ON Склады._IDRRef IN (Select СкладСсылка From #Temp_PickupPoints)
-	Inner Join _Reference23612 
+	Inner Join _Reference23612 WITH(NOLOCK)
 		On Склады._Fld23620RRef = _Reference23612._IDRRef
-	Left Join _Reference23612_VT23613 As ПВЗГрафикРаботы 
+	Left Join _Reference23612_VT23613 As ПВЗГрафикРаботы WITH(NOLOCK)
 		On _Reference23612._IDRRef = _Reference23612_IDRRef
 			AND (case when @@DATEFIRST = 1 then DATEPART ( dw , #Temp_Dates.date ) when DATEPART ( dw , #Temp_Dates.date ) = 1 then 7 else DATEPART ( dw , #Temp_Dates.date ) -1 END) = ПВЗГрафикРаботы._Fld23615
-	Left Join _Reference23612_VT27054 As ПВЗИзмененияГрафикаРаботы 
+	Left Join _Reference23612_VT27054 As ПВЗИзмененияГрафикаРаботы WITH(NOLOCK)
 		On _Reference23612._IDRRef = ПВЗИзмененияГрафикаРаботы._Reference23612_IDRRef
 			AND #Temp_Dates.date = ПВЗИзмененияГрафикаРаботы._Fld27056
 Where
@@ -884,7 +884,7 @@ SELECT
     PlanningGroups.Приоритет
 into #Temp_IntervalsAll
 FROM
-    dbo._AccumRg25110 T5 With (READCOMMITTED)
+    dbo._AccumRg25110 T5 With (NOLOCK)
     Inner Join PlanningGroups ON PlanningGroups.ГруппаПланирования = T5._Fld25112RRef
 WHERE
     T5._Period BETWEEN @P_DateTimePeriodBegin AND @P_DateTimePeriodEnd --begin +2
@@ -931,7 +931,7 @@ SELECT
     PlanningGroups.Приоритет
 into #Temp_IntervalsAll
 FROM
-	[dbo].[IntervalsAggregate] T5 With (READCOMMITTED)
+	[dbo].[IntervalsAggregate] T5 With (NOLOCK)
 	Inner Join PlanningGroups ON PlanningGroups.ГруппаПланирования = T5.ГруппаПланирования
 WHERE
 	T5.Период BETWEEN @P_DateTimePeriodBegin AND @P_DateTimePeriodEnd --begin +2
@@ -1083,7 +1083,7 @@ SELECT
     ) AS ВремяНаОбслуживаниеОборот,
     CAST(CAST(МощностиДоставки._Period  AS DATE) AS DATETIME) AS Дата
 FROM
-    dbo._AccumRg25104 МощностиДоставки With (READCOMMITTED)
+    dbo._AccumRg25104 МощностиДоставки With (NOLOCK)
 WHERE
     МощностиДоставки._Period BETWEEN @P_DateTimePeriodBegin AND @P_DateTimePeriodEnd
     AND МощностиДоставки._Fld25105RRef IN (Select ЗонаДоставкиРодительСсылка From  #Temp_GeoData)
@@ -1099,7 +1099,7 @@ SELECT
     МощностиДоставки.ВремяНаОбслуживаниеОборот AS ВремяНаОбслуживаниеОборот,
     МощностиДоставки.Период AS Дата
 FROM
-    [dbo].[DeliveryPowerAggregate] МощностиДоставки With (READCOMMITTED)
+    [dbo].[DeliveryPowerAggregate] МощностиДоставки With (NOLOCK)
 WHERE
     МощностиДоставки.Период BETWEEN @P_DateTimePeriodBegin AND @P_DateTimePeriodEnd
 	AND МощностиДоставки.ЗонаДоставки IN (Select ЗонаДоставкиРодительСсылка From  #Temp_GeoData)
@@ -1154,7 +1154,7 @@ Select Top 1
 Into #Temp_YourTimeInterval
 From 
 	#Temp_GeoData Геозоны
-	Inner Join _Reference114_VT30388 ИнтервалыДоставкиВВашеВремя
+	Inner Join _Reference114_VT30388 ИнтервалыДоставкиВВашеВремя WITH(NOLOCK)
 		On ИнтервалыДоставкиВВашеВремя._Reference114_IDRRef = Геозоны.Геозона
 ;
 
@@ -1177,7 +1177,7 @@ Select
 	Склады._Fld19544 AS ERPКодСклада
 Into #Temp_PickupPoints
 From 
-	dbo._Reference226 Склады 
+	dbo._Reference226 Склады WITH(NOLOCK)
 Where Склады._Fld19544 in({0})
  
 
@@ -1378,11 +1378,11 @@ SELECT
 Into #Temp_Dimensions
 FROM
     #Temp_Size T1 WITH(NOLOCK)
-    INNER JOIN dbo._Const21167 T2 ON 1 = 1
-    INNER JOIN dbo._Const21165 T3 ON 1 = 1
-    INNER JOIN dbo._Const21338 T4 ON 1 = 1
-    INNER JOIN dbo._Const21336 T5 ON 1 = 1
-    INNER JOIN dbo._Const21579 T6 ON 1 = 1
+    INNER JOIN dbo._Const21167 T2 WITH(NOLOCK) ON 1 = 1
+    INNER JOIN dbo._Const21165 T3 WITH(NOLOCK) ON 1 = 1
+    INNER JOIN dbo._Const21338 T4 WITH(NOLOCK) ON 1 = 1
+    INNER JOIN dbo._Const21336 T5 WITH(NOLOCK) ON 1 = 1
+    INNER JOIN dbo._Const21579 T6 WITH(NOLOCK) ON 1 = 1
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select 
@@ -1451,7 +1451,7 @@ From
 		AND ГруппыПланирования._Fld23301RRef = #Temp_Dimensions.Габарит--(ГруппыПланирования._Fld23301RRef = Номенклатура.Габариты OR (Номенклатура.Габариты = 0xAC2CBF86E693F63444670FFEB70264EE AND ГруппыПланирования._Fld23301RRef= 0xAD3F7F5FC4F15DAD4F693CAF8365EC0D) ) --габариты
 		AND ГруппыПланирования._Marked = 0x00
 		AND Номенклатура.СкладПВЗСсылка Is Null
-	Inner Join dbo._Reference23294 ПодчиненнаяГП
+	Inner Join dbo._Reference23294 ПодчиненнаяГП WITH(NOLOCK)
 			On  ГруппыПланирования._Fld26526RRef = ПодчиненнаяГП._IDRRef
 Where 
 	Номенклатура.СкладПВЗСсылка IS NULL
@@ -1463,7 +1463,7 @@ Select
     ЦеныТолькоПрайсы._Fld21410_RTRef AS Регистратор_RTRef,
     ЦеныТолькоПрайсы._Fld21410_RRRef AS Регистратор_RRRef
 Into #Temp_Megaprices
-From _AccumRg21407 ЦеныТолькоПрайсы With (READCOMMITTED)
+From _AccumRg21407 ЦеныТолькоПрайсы With (NOLOCK)
 	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
 		ON ЦеныТолькоПрайсы._Fld21443RRef = ExchangeRates._Fld14558RRef
 		AND ЦеныТолькоПрайсы._Fld21410_RTRef = 0x00000153 --Цены.Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса
@@ -1480,7 +1480,7 @@ Select Distinct
 	Цены._Fld21410_RRRef AS РегистраторЦен_RRRef,
 	Цены._Fld21442 * ExchangeRates._Fld14559 / ExchangeRates._Fld14560 AS Цена
 Into #Temp_Prices
-From _AccumRg21407 Цены With (READCOMMITTED)
+From _AccumRg21407 Цены With (NOLOCK)
 	Inner Join _InfoRgSL26678 ExchangeRates With (NOLOCK)
 		ON Цены._Fld21443RRef = ExchangeRates._Fld14558RRef
 		AND Цены._Fld21410_RTRef IN(0x00000141,0x00000153)  --Регистратор ССЫЛКА Документ.мегапрайсРегистрацияПрайса, ЗаказПоставщику
@@ -1512,7 +1512,7 @@ SELECT
     SUM(T2._Fld21411) - SUM(T2._Fld21412) AS Количество
 Into #Temp_Remains
 FROM
-    dbo._AccumRgT21444 T2 WITH (READCOMMITTED)
+    dbo._AccumRgT21444 T2 WITH (NOLOCK)
 	INNER JOIN FilteredGoods FG 
 	ON T2._Fld21408RRef = FG.НоменклатураСсылка
 		AND T2._Period = '5999-11-01 00:00:00'
@@ -1550,7 +1550,7 @@ SELECT Distinct
     T1._Fld23833RRef AS СкладНазначения
 Into #Temp_WarehouseDates
 FROM
-    dbo._InfoRg23830 T1 With (READCOMMITTED)
+    dbo._InfoRg23830 T1 With (NOLOCK)
 	Inner Join #Temp_Remains With (NOLOCK)
 	ON T1._Fld23831RRef = #Temp_Remains.СкладИсточника
 	AND T1._Fld23832 = #Temp_Remains.ДатаСобытия
@@ -2090,14 +2090,14 @@ Select
 INTO #Temp_PickupWorkingHours
 From 
 	#Temp_Dates
-	Inner Join dbo._Reference226 Склады 
+	Inner Join dbo._Reference226 Склады WITH(NOLOCK)
 		ON Склады._IDRRef IN (Select СкладСсылка From #Temp_PickupPoints)
-	Inner Join _Reference23612 
+	Inner Join _Reference23612 WITH(NOLOCK)
 		On Склады._Fld23620RRef = _Reference23612._IDRRef
-	Left Join _Reference23612_VT23613 As ПВЗГрафикРаботы 
+	Left Join _Reference23612_VT23613 As ПВЗГрафикРаботы WITH(NOLOCK)
 		On _Reference23612._IDRRef = _Reference23612_IDRRef
 			AND (case when @@DATEFIRST = 1 then DATEPART ( dw , #Temp_Dates.date ) when DATEPART ( dw , #Temp_Dates.date ) = 1 then 7 else DATEPART ( dw , #Temp_Dates.date ) -1 END) = ПВЗГрафикРаботы._Fld23615
-	Left Join _Reference23612_VT27054 As ПВЗИзмененияГрафикаРаботы 
+	Left Join _Reference23612_VT27054 As ПВЗИзмененияГрафикаРаботы WITH(NOLOCK)
 		On _Reference23612._IDRRef = ПВЗИзмененияГрафикаРаботы._Reference23612_IDRRef
 			AND #Temp_Dates.date = ПВЗИзмененияГрафикаРаботы._Fld27056
 Where
