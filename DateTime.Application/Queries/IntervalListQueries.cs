@@ -46,6 +46,7 @@ Select
 	ЗоныДоставкиРодитель._Description AS ЗонаДоставкиРодительНаименование,
     ЗоныДоставки._Fld31473 AS КоэффициентЗоныДоставки,
 	Геозона._IDRRef As Геозона,
+    Геозона._Fld33174 As УчетИспользованияМощностей,
     Геозона._Fld33171 As ЦелевойДень,
     Геозона._Fld33173 As ВремяСтопаНаЦелевойДень,
     Геозона._Fld33172 As ВремяНачалаДеньПослеЦелевого,
@@ -1772,6 +1773,82 @@ where
 	UnavailableDates.StartDate is NULL
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
+SELECT
+	T1.Период As Период,
+	T1.МассаПриход As МассаПриход,
+	T1.МассаРасход As МассаРасход,
+	T1.ОбъемПриход As ОбъемПриход,
+	T1.ОбъемРасход As ОбъемРасход,
+	T1.ВремяНаОбслуживаниеПриход As ВремяНаОбслуживаниеПриход,
+	T1.ВремяНаОбслуживаниеРасход As ВремяНаОбслуживаниеРасход
+Into #Temp_DeliveryPowerUsage
+FROM (SELECT
+	DATETIME2FROMPARTS(DATEPART(YEAR,МощностиДоставки._Period),DATEPART(MONTH,МощностиДоставки._Period),DATEPART(DAY,МощностиДоставки._Period),0,0,0,0,0) AS Период,
+	ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN МощностиДоставки._Fld25108 ELSE 0.0 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0) AS ОбъемПриход,
+	ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25108 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0) AS ОбъемРасход,
+	ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN МощностиДоставки._Fld25107 ELSE 0.0 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0) AS МассаПриход,
+	ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25107 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0) AS МассаРасход,
+	ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN МощностиДоставки._Fld25201 ELSE 0.0 END) AS NUMERIC(16, 2)) AS NUMERIC(16, 2)),0.0) AS ВремяНаОбслуживаниеПриход,
+	ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25201 END) AS NUMERIC(16, 2)) AS NUMERIC(16, 2)),0.0) AS ВремяНаОбслуживаниеРасход
+	FROM dbo._AccumRg25104 МощностиДоставки WITH(NOLOCK)
+	WHERE МощностиДоставки._Period >= @P_DateTimePeriodBegin 
+	AND МощностиДоставки._Period <= DateAdd(Day, 1, @P_DateTimePeriodEnd) 
+	AND МощностиДоставки._Active = 0x01 
+	AND (МощностиДоставки._Fld25105RRef IN
+		(SELECT
+			Геодата.ЗонаДоставкиРодительСсылка AS ЗонаДоставкиРодительСсылка
+		FROM #Temp_GeoData Геодата WITH(NOLOCK)
+		WHERE Геодата.УчетИспользованияМощностей = 0x01
+		)
+	)
+GROUP BY DATETIME2FROMPARTS(DATEPART(YEAR,МощностиДоставки._Period),DATEPART(MONTH,МощностиДоставки._Period),DATEPART(DAY,МощностиДоставки._Period),0,0,0,0,0)
+HAVING (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN МощностиДоставки._Fld25108 ELSE 0.0 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0)) <> 0.0 
+OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25108 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0)) <> 0.0 
+OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN МощностиДоставки._Fld25107 ELSE 0.0 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0)) <> 0.0 
+OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25107 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0)) <> 0.0 
+OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN МощностиДоставки._Fld25201 ELSE 0.0 END) AS NUMERIC(16, 2)) AS NUMERIC(16, 2)),0.0)) <> 0.0 
+OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25201 END) AS NUMERIC(16, 2)) AS NUMERIC(16, 2)),0.0)) <> 0.0) T1
+;
+
+Select
+	Мощности.Период,
+	Case When Мощности.МассаПриход = 0
+		Then 0
+		Else Мощности.МассаРасход / Мощности.МассаПриход * 100 
+	End As ПроцентИспользования
+Into #Temp_DeliveryPowerUsagePercent
+From #Temp_DeliveryPowerUsage Мощности WITH(NOLOCK)
+
+Union All
+
+Select
+	Мощности.Период,
+	Case When Мощности.ОбъемПриход = 0
+		Then 0
+		Else Мощности.ОбъемРасход / Мощности.ОбъемПриход * 100 
+	End
+From #Temp_DeliveryPowerUsage Мощности WITH(NOLOCK)
+
+Union All
+
+Select
+	Мощности.Период,
+	Case When Мощности.ВремяНаОбслуживаниеПриход = 0
+		Then 0
+		Else Мощности.ВремяНаОбслуживаниеРасход / Мощности.ВремяНаОбслуживаниеПриход * 100 
+	End
+From #Temp_DeliveryPowerUsage Мощности WITH(NOLOCK)
+;
+Select
+	Мощности.Период
+Into #Temp_DeliveryPowerLoadedDates
+From #Temp_DeliveryPowerUsagePercent Мощности WITH(NOLOCK)
+Group by 
+	Мощности.Период
+Having 
+	Max(Мощности.ПроцентИспользования) >= @P_LoadedIntervalsUsagePercent
+;
+
 Select Top 1
 	ДоступныеИнтервалы.Период
 Into #Temp_FirstDate
@@ -1794,15 +1871,20 @@ Select
 		When ДоступныеИнтервалы.ЗагруженныйИнтервал = 1
 		And DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 <= @LoadedIntervalsDays 
 			Then 'loaded'
+        When ЗагруженныеДаты.Период is not null
+		And DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 <= @LoadedIntervalsDays 
+			Then 'loaded'
 		When DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 >= ДоступныеИнтервалы.ПланируемыеИнтервалыС
 			And DATEDIFF(DAY, ПерваяДата.Период, ДоступныеИнтервалы.Период) + 1 <= ДоступныеИнтервалы.ПланируемыеИнтервалыПо
 			Then 'planned'
 		Else 
 			'basic'
 	End As IntervalType	
-From #Temp_AvailableIntervals ДоступныеИнтервалы
-	Inner Join #Temp_FirstDate ПерваяДата
+From #Temp_AvailableIntervals ДоступныеИнтервалы WITH(NOLOCK)
+	Inner Join #Temp_FirstDate ПерваяДата WITH(NOLOCK)
 		On 1 = 1
+	Left Outer Join #Temp_DeliveryPowerLoadedDates ЗагруженныеДаты WITH(NOLOCK)
+	On ДоступныеИнтервалы.Период = ЗагруженныеДаты.Период
 Order by StartDate
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 ";

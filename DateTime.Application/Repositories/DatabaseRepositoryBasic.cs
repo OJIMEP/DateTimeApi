@@ -380,6 +380,8 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             cmd.Parameters.AddWithValue("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
             cmd.Parameters.AddWithValue("@LoadedIntervalsDays", (int)globalParameters.GetValue("ДнейСЗагруженнымиИнтерваламиДоставкиОтДатыДоступностиЗаказа"));
+            cmd.Parameters.AddWithValue("@P_LoadedIntervalsUsagePercent",
+                (double)globalParameters.GetValue("ПроцентФактическиИспользованныхМощностейДляЗагруженныхИнтервалов"));
 
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
@@ -425,7 +427,7 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_YourTimeDelivery", deliveryType == Constants.YourTimeDelivery ? 1 : 0);
             cmd.Parameters.AddWithValue("@P_IsDelivery", deliveryType == Constants.Self ? 0 : 1);
             cmd.Parameters.AddWithValue("@P_IsPickup", deliveryType == Constants.Self ? 1 : 0);
-
+            
             string pickupPointsString = !query.PickupPoints.Any() ? "''" : string.Join(", ", query.PickupPoints.Take(10)
                 .Select((value, index) =>
                 {

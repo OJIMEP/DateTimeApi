@@ -355,6 +355,8 @@ namespace DateTimeService.Application.Repositories
             queryParameters.Add("@P_StockPriority", (int)globalParameters.GetValue("ПриоритизироватьСток_64854"));
             queryParameters.Add("@P_YourTimeDelivery", yourTimeDelivery ? 1 : 0);
             queryParameters.Add("@LoadedIntervalsDays", (int)globalParameters.GetValue("ДнейСЗагруженнымиИнтерваламиДоставкиОтДатыДоступностиЗаказа"));
+            queryParameters.Add("@P_LoadedIntervalsUsagePercent", 
+                (double)globalParameters.GetValue("ПроцентФактическиИспользованныхМощностейДляЗагруженныхИнтервалов"));
 
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 

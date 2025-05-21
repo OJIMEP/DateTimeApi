@@ -82,6 +82,12 @@ namespace DateTimeService.Application.Repositories
                 {
                     Name = "ДнейСЗагруженнымиИнтерваламиДоставкиОтДатыДоступностиЗаказа",
                     DefaultDouble = 0
+                },
+                new GlobalParameter
+                {
+                    Name = "ПроцентФактическиИспользованныхМощностейДляЗагруженныхИнтервалов",
+                    DefaultDouble = 999,
+                    UseDefault = true
                 }
             };
 
