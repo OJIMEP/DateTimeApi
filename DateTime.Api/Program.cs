@@ -1,3 +1,4 @@
+using AspNetCoreRateLimit;
 using AuthLibrary.Data;
 using DateTimeService.Api;
 using DateTimeService.Api.Middlewares;
@@ -17,6 +18,12 @@ var configuration = builder.Configuration;
 // Add services to the container.
 builder.Services.AddCors();
 
+builder.Services.AddOptions();
+builder.Services.AddMemoryCache();
+
+builder.Services.Configure<IpRateLimitOptions>(configuration.GetSection("IpRateLimiting"));
+builder.Services.AddInMemoryRateLimiting();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -24,6 +31,8 @@ builder.Services.AddApplication(configuration);
 builder.Services.AddApi(configuration);
 
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
@@ -62,6 +71,8 @@ app.UseSwaggerUI();
 app.UseHangfireDashboard();
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
+app.UseIpRateLimiting();
 
 app.Use(async (context, next) =>
 {
