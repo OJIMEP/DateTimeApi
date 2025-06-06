@@ -367,7 +367,9 @@ namespace DateTimeService.Application.Repositories
                 DateMove.Date.AddDays(globalParameters.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss"),
                 globalParameters.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 globalParameters.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
-                dbConnection.DatabaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("UseIndexHintWarehouseDates") : ""); // index hint
+                dbConnection.DatabaseType == DatabaseType.ReplicaTables ? _configuration.GetValue<string>("UseIndexHintWarehouseDates") : "", // index hint
+                globalParameters.GetValue("EPassКоличествоРабочихДнейДляРегистрацииШтрихкода")
+            );
 
             return queryText;
         }

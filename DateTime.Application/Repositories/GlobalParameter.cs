@@ -88,6 +88,11 @@ namespace DateTimeService.Application.Repositories
                     Name = "ПроцентФактическиИспользованныхМощностейДляЗагруженныхИнтервалов",
                     DefaultDouble = 999,
                     UseDefault = true
+                },
+                new GlobalParameter
+                {
+                    Name = "EPassКоличествоРабочихДнейДляРегистрацииШтрихкода",
+                    DefaultDouble = 0
                 }
             };
 

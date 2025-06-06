@@ -89,6 +89,7 @@ Select
 	Номенклатура._IDRRef AS НоменклатураСсылка,
 	Упаковки._IDRRef AS УпаковкаСсылка,
     Номенклатура._Fld21822RRef as ТНВЭДСсылка,
+	Номенклатура._Fld30392RRef As ДопКодТНВЭД,
     Номенклатура._Fld3515RRef as ТоварнаяКатегорияСсылка,
     0x00000000000000000000000000000000 AS Склад,
     Sum(T1.quantity) As Количество	
@@ -108,12 +109,14 @@ Group By
 	Номенклатура._IDRRef,
 	Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
+	Номенклатура._Fld30392RRef,
     Номенклатура._Fld3515RRef
 union all
 Select 
 	Номенклатура._IDRRef,
 	Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
+	Номенклатура._Fld30392RRef,
     Номенклатура._Fld3515RRef,
     0x00000000000000000000000000000000,
     Sum(T1.quantity)	
@@ -132,12 +135,14 @@ Group By
 	Номенклатура._IDRRef,
 	Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
+	Номенклатура._Fld30392RRef,
     Номенклатура._Fld3515RRef
 union all
 Select 
 	Номенклатура._IDRRef,
 	Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
+	Номенклатура._Fld30392RRef,
     Номенклатура._Fld3515RRef,
     T1.Склад,
     Sum(T1.Количество)	
@@ -159,25 +164,150 @@ Group By
     T1.Склад,
     Упаковки._IDRRef,
     Номенклатура._Fld21822RRef,
+	Номенклатура._Fld30392RRef,
     Номенклатура._Fld3515RRef
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 /*Конец товаров*/
 
 /*Маркируемые коды ТНВЭД*/
 SELECT DISTINCT
-T1.КодТНВЭД AS КодТНВЭД
+	T1.КодТНВЭД AS КодТНВЭД,
+	T1.ДополнительныйКод
 INTO #Temp_MarkedCodes
 FROM (SELECT
-	T4._Fld27184RRef AS КодТНВЭД
+	T4._Fld27184RRef AS КодТНВЭД,
+	T4._Fld27186RRef As ДополнительныйКод
 	FROM (SELECT
 		T3._Fld27184RRef AS КодТНВЭД,
+		T3._Fld32086RRef As ДополнительныйКод,
 		MAX(T3._Period) AS MAXPERIOD_
 		FROM dbo._InfoRg27183 T3
 			INNER JOIN #Temp_Goods T5 WITH(NOLOCK)
 			ON (T3._Fld27184RRef = T5.ТНВЭДСсылка)
-		GROUP BY T3._Fld27184RRef) T2
+		WHERE T3._Period <= @P_DateTimePeriodBegin
+		GROUP BY T3._Fld27184RRef,
+			T3._Fld32086RRef) T2
 	INNER JOIN dbo._InfoRg27183 T4
-	ON T2.КодТНВЭД = T4._Fld27184RRef AND T2.MAXPERIOD_ = T4._Period AND T4._Fld28120 = 0x01) T1
+	ON T2.КодТНВЭД = T4._Fld27184RRef 
+	AND T2.ДополнительныйКод = T4._Fld27186RRef 
+	AND T2.MAXPERIOD_ = T4._Period 
+	AND T4._Fld28120 = 0x01) T1
+;
+
+WITH НастройкиМаркировкиУКЗ AS 
+(
+SELECT
+	НастройкиМаркировки.КодТНВЭД,
+	НастройкиМаркировки.ТоварнаяКатегория,
+	НастройкиМаркировки.Номенклатура
+FROM (SELECT
+		T5._Fld32959RRef AS КодТНВЭД,
+		T5._Fld32960RRef AS ТоварнаяКатегория,
+		T5._Fld32961RRef AS Номенклатура,
+		T5._Fld32962 AS МаркируетсяУКЗ
+	FROM (SELECT
+			T3._Fld32959RRef AS Fld32959RRef,
+			T3._Fld32960RRef AS Fld32960RRef,
+			T3._Fld32961RRef AS Fld32961RRef,
+			MAX(T3._Period) AS MAXPERIOD_
+		FROM dbo._InfoRg32958 T3
+			INNER JOIN #Temp_Goods T5 WITH(NOLOCK)
+			ON (T3._Fld32959RRef = T5.ТНВЭДСсылка)
+		WHERE T3._Period <= @P_DateTimePeriodBegin
+		GROUP BY T3._Fld32959RRef,
+		T3._Fld32960RRef,
+		T3._Fld32961RRef) T2
+	INNER JOIN dbo._InfoRg32958 T5
+		ON T2.Fld32959RRef = T5._Fld32959RRef 
+		AND T2.Fld32960RRef = T5._Fld32960RRef 
+		AND T2.Fld32961RRef = T5._Fld32961RRef 
+		AND T2.MAXPERIOD_ = T5._Period) НастройкиМаркировки
+WHERE НастройкиМаркировки.МаркируетсяУКЗ = 0x01)
+SELECT TOP 1
+	МаркируемыеТовары.НоменклатураСсылка
+INTO #Temp_MarkedGoodsWithoutGtin
+FROM
+	(-- Маркировка УКЗ
+	SELECT
+		Товары.НоменклатураСсылка	
+	FROM #Temp_Goods Товары
+		INNER JOIN НастройкиМаркировкиУКЗ НастройкиПоНоменклатуре
+		ON НастройкиПоНоменклатуре.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND НастройкиПоНоменклатуре.Номенклатура = Товары.НоменклатураСсылка
+	
+	UNION ALL 
+
+	SELECT
+		Товары.НоменклатураСсылка	
+	FROM #Temp_Goods Товары
+		INNER JOIN НастройкиМаркировкиУКЗ НастройкиПоТоварнойКатегории
+		ON НастройкиПоТоварнойКатегории.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND НастройкиПоТоварнойКатегории.ТоварнаяКатегория = Товары.ТоварнаяКатегорияСсылка
+		AND НастройкиПоТоварнойКатегории.ТоварнаяКатегория != 0x00000000000000000000000000000000
+		LEFT JOIN НастройкиМаркировкиУКЗ НастройкиПоНоменклатуре
+		ON НастройкиПоНоменклатуре.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND НастройкиПоНоменклатуре.Номенклатура = Товары.НоменклатураСсылка
+	WHERE 
+		НастройкиПоНоменклатуре.Номенклатура IS NULL
+
+	UNION ALL 
+
+	SELECT
+		Товары.НоменклатураСсылка	
+	FROM #Temp_Goods Товары
+		INNER JOIN НастройкиМаркировкиУКЗ НастройкиПоКодуТНВЭД
+		ON НастройкиПоКодуТНВЭД.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND НастройкиПоКодуТНВЭД.ТоварнаяКатегория = 0x00000000000000000000000000000000
+		AND НастройкиПоКодуТНВЭД.Номенклатура = 0x00000000000000000000000000000000
+		LEFT JOIN НастройкиМаркировкиУКЗ НастройкиПоТоварнойКатегории
+		ON НастройкиПоТоварнойКатегории.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND НастройкиПоТоварнойКатегории.ТоварнаяКатегория = Товары.ТоварнаяКатегорияСсылка
+		AND НастройкиПоТоварнойКатегории.ТоварнаяКатегория != 0x00000000000000000000000000000000
+		LEFT JOIN НастройкиМаркировкиУКЗ НастройкиПоНоменклатуре
+		ON НастройкиПоНоменклатуре.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND НастройкиПоНоменклатуре.Номенклатура = Товары.НоменклатураСсылка
+	WHERE 
+		НастройкиПоНоменклатуре.Номенклатура IS NULL
+		AND НастройкиПоТоварнойКатегории.ТоварнаяКатегория IS NULL
+
+	UNION ALL 
+
+	--Маркировка СИ
+	SELECT
+		Товары.НоменклатураСсылка	
+	FROM #Temp_Goods Товары
+		INNER JOIN #Temp_MarkedCodes МаркируемыеКодыТНВЭД 
+		ON МаркируемыеКодыТНВЭД.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND МаркируемыеКодыТНВЭД.ДополнительныйКод = Товары.ДопКодТНВЭД
+		AND МаркируемыеКодыТНВЭД.ДополнительныйКод != 0x00000000000000000000000000000000
+
+	UNION ALL 
+
+	SELECT
+		Товары.НоменклатураСсылка	
+	FROM #Temp_Goods Товары
+		INNER JOIN #Temp_MarkedCodes МаркируемыеКодыТНВЭД 
+		ON МаркируемыеКодыТНВЭД.КодТНВЭД = Товары.ТНВЭДСсылка
+		AND МаркируемыеКодыТНВЭД.ДополнительныйКод = 0x00000000000000000000000000000000
+
+	UNION ALL 
+
+	--Потенциальная маркировки СИ и УКЗ
+	SELECT
+		Товары.НоменклатураСсылка	
+	FROM #Temp_Goods Товары
+		INNER JOIN dbo._InfoRg33196 ПотенциальноМаркируемыеТоварныеКатегории 
+		ON Товары.ТоварнаяКатегорияСсылка = ПотенциальноМаркируемыеТоварныеКатегории._Fld33197RRef
+		AND Товары.ТНВЭДСсылка = 0x00000000000000000000000000000000
+	WHERE 
+		ПотенциальноМаркируемыеТоварныеКатегории._Fld33199 = 0x01
+		OR ПотенциальноМаркируемыеТоварныеКатегории._Fld33200 = 0x01) МаркируемыеТовары
+		LEFT JOIN dbo._InfoRg15619 ШтрихкодыНоменклатуры WITH (NOLOCK)
+		ON МаркируемыеТовары.НоменклатураСсылка = ШтрихкодыНоменклатуры._Fld15621RRef
+		AND ШтрихкодыНоменклатуры._Fld27279 = 0x01
+WHERE 
+	ШтрихкодыНоменклатуры._Fld15620 IS NULL
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 /*Размеры корзины в целом для расчета габаритов*/
 SELECT
@@ -297,6 +427,8 @@ FROM
     ) T3 ON 1 = 1
     LEFT OUTER JOIN #Temp_MarkedCodes AS MarkedCodes
     ON MarkedCodes.КодТНВЭД = T1.ТНВЭДСсылка
+    And (MarkedCodes.ДополнительныйКод = T1.ДопКодТНВЭД
+		Or MarkedCodes.ДополнительныйКод = 0x00000000000000000000000000000000)
 GROUP BY
     T1.НоменклатураСсылка,
     T2._Fld6000 * T1.Количество,
@@ -840,7 +972,9 @@ Group by
     isNull(T2.ДатаДоступностиСклад, @P_MaxDate),
     T1.НоменклатураСсылка
 Having 
-    min(Case when 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1;
+    min(Case when 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
 
 With TempSourcesGrouped AS
 (
@@ -1065,7 +1199,8 @@ From dbo._InfoRg25217 СмещениеДатДоставки With (NOLOCK)
 	Inner Join #Temp_PickupPoints PickupPoints
 	On PickupPoints.СкладСсылка = СмещениеДатДоставки._Fld25220RRef
 	And СмещениеДатДоставки._Fld25218 <= @P_DateTimeNow
-	And СмещениеДатДоставки._Fld25219 >= @P_DateTimeNow;
+	And СмещениеДатДоставки._Fld25219 >= @P_DateTimeNow
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With Temp_CountOfGoods AS
 (
@@ -1077,7 +1212,7 @@ FROM
 Select Top 1 
 	Max(DATEADD(HOUR, ISNULL(СмещениеДатДоставки.РазмерСмещения, 0), БлижайщиеДатыПоТоварам.БлижайшаяДата)) AS DateAvailable, 
     БлижайщиеДатыПоТоварам.СкладНазначения AS СкладНазначения
-Into #Temp_DateAvailable
+Into #Temp_NearestDate
 from #Temp_ClosestDatesByGoods БлижайщиеДатыПоТоварам With (NOLOCK)
     LEFT OUTER JOIN Temp_CountOfGoods
 	    ON 1 = 1
@@ -1087,6 +1222,37 @@ from #Temp_ClosestDatesByGoods БлижайщиеДатыПоТоварам With
 Group by БлижайщиеДатыПоТоварам.СкладНазначения
 HAVING COUNT(DISTINCT БлижайщиеДатыПоТоварам.НоменклатураСсылка) = MIN(Temp_CountOfGoods.CountOfGoods)
 Order by DateAvailable ASC
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
+WITH DateForGtinRegistration AS
+(
+	SELECT 
+		MAX(T1.Дата) AS DateAvailable
+	FROM
+		(SELECT TOP {7} -- здесь ГП EPassКоличествоРабочихДнейДляРегистрацииШтрихкода
+			ДанныеКалендаря._Fld14262 AS Дата
+		FROM #Temp_NearestDate
+		INNER JOIN _InfoRg14260 ДанныеКалендаря 
+		ON #Temp_NearestDate.DateAvailable < ДанныеКалендаря._Fld14262
+			AND ДанныеКалендаря._Fld14261RRef = 0x8265002522BD9FAE11E4C0CE607941B6 -- календарь = Республика Беларусь
+			AND ДанныеКалендаря._Fld14264RRef IN (0xA826C921F976C5EE45F87E7C18D0A858, 0xAC0042F13CCF80E7466E4329C5762C35)--рабочий, предпразничный
+			AND ДанныеКалендаря._Fld14262 <= @P_DateTimePeriodEnd) T1)
+SELECT 
+	#Temp_NearestDate.СкладНазначения,
+	-- Если среди товаров есть маркируемые/потенциально маркируемые без зарегистрированного в EPass Gtin, то к дате доступности прибавляем количество рабочих дней из гп
+	CASE
+		WHEN #Temp_MarkedGoodsWithoutGtin.НоменклатураСсылка IS NULL
+			OR DateForGtinRegistration.DateAvailable IS NULL 
+			THEN #Temp_NearestDate.DateAvailable
+		ELSE DATEADD(HOUR, 
+			DATEPART(HOUR, #Temp_NearestDate.DateAvailable), 
+			DateForGtinRegistration.DateAvailable) -- Добавляем количество часов из исходной даты доступности
+
+	END AS DateAvailable 
+INTO #Temp_DateAvailable
+FROM #Temp_NearestDate
+	LEFT JOIN #Temp_MarkedGoodsWithoutGtin ON 1 = 1
+	LEFT JOIN DateForGtinRegistration ON 1 = 1
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 /*Тут закончился процесс оптимальной даты. Склад назначения нужен чтоб потом правильную ГП выбрать*/
 
@@ -1321,7 +1487,7 @@ HAVING
 			END > 0.0
     )
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), KEEP PLAN, KEEPFIXED PLAN);
-;
+
 
 Select Distinct
 	ВременныеИнтервалы.Период AS Период,
@@ -1808,7 +1974,7 @@ OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind 
 OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25107 END) AS NUMERIC(16, 3)) AS NUMERIC(16, 3)),0.0)) <> 0.0 
 OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN МощностиДоставки._Fld25201 ELSE 0.0 END) AS NUMERIC(16, 2)) AS NUMERIC(16, 2)),0.0)) <> 0.0 
 OR (ISNULL(CAST(CAST(SUM(CASE WHEN МощностиДоставки._RecordKind = 0.0 THEN 0.0 ELSE МощностиДоставки._Fld25201 END) AS NUMERIC(16, 2)) AS NUMERIC(16, 2)),0.0)) <> 0.0) T1
-;
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select
 	Мощности.Период,
@@ -1838,7 +2004,8 @@ Select
 		Else Мощности.ВремяНаОбслуживаниеРасход / Мощности.ВремяНаОбслуживаниеПриход * 100 
 	End
 From #Temp_DeliveryPowerUsage Мощности WITH(NOLOCK)
-;
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
+
 Select
 	Мощности.Период
 Into #Temp_DeliveryPowerLoadedDates
@@ -1847,7 +2014,7 @@ Group by
 	Мощности.Период
 Having 
 	Max(Мощности.ПроцентИспользования) >= @P_LoadedIntervalsUsagePercent
-;
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select Top 1
 	ДоступныеИнтервалы.Период
