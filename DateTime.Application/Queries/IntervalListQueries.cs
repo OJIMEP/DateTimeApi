@@ -176,7 +176,7 @@ SELECT DISTINCT
 INTO #Temp_MarkedCodes
 FROM (SELECT
 	T4._Fld27184RRef AS КодТНВЭД,
-	T4._Fld27186RRef As ДополнительныйКод
+	T4._Fld32086RRef As ДополнительныйКод
 	FROM (SELECT
 		T3._Fld27184RRef AS КодТНВЭД,
 		T3._Fld32086RRef As ДополнительныйКод,
@@ -189,7 +189,7 @@ FROM (SELECT
 			T3._Fld32086RRef) T2
 	INNER JOIN dbo._InfoRg27183 T4
 	ON T2.КодТНВЭД = T4._Fld27184RRef 
-	AND T2.ДополнительныйКод = T4._Fld27186RRef 
+	AND T2.ДополнительныйКод = T4._Fld32086RRef 
 	AND T2.MAXPERIOD_ = T4._Period 
 	AND T4._Fld28120 = 0x01) T1
 ;
