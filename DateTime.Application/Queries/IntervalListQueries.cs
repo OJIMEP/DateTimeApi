@@ -222,7 +222,15 @@ FROM (SELECT
 		AND T2.Fld32960RRef = T5._Fld32960RRef 
 		AND T2.Fld32961RRef = T5._Fld32961RRef 
 		AND T2.MAXPERIOD_ = T5._Period) НастройкиМаркировки
-WHERE НастройкиМаркировки.МаркируетсяУКЗ = 0x01)
+WHERE НастройкиМаркировки.МаркируетсяУКЗ = 0x01),
+ЕстьЗарегистрированныеШтрихкоды AS (
+	SELECT DISTINCT
+		ШтрихкодыНоменклатуры._Fld15621RRef AS Номенклатура
+	FROM dbo._InfoRg15619 ШтрихкодыНоменклатуры WITH (NOLOCK)
+		INNER JOIN #Temp_Goods Товары
+		ON Товары.НоменклатураСсылка = ШтрихкодыНоменклатуры._Fld15621RRef
+	WHERE ШтрихкодыНоменклатуры._Fld27279 = 0x1
+)
 SELECT TOP 1
 	МаркируемыеТовары.НоменклатураСсылка
 INTO #Temp_MarkedGoodsWithoutGtin
@@ -302,11 +310,10 @@ FROM
 	WHERE 
 		ПотенциальноМаркируемыеТоварныеКатегории._Fld33199 = 0x01
 		OR ПотенциальноМаркируемыеТоварныеКатегории._Fld33200 = 0x01) МаркируемыеТовары
-		LEFT JOIN dbo._InfoRg15619 ШтрихкодыНоменклатуры WITH (NOLOCK)
-		ON МаркируемыеТовары.НоменклатураСсылка = ШтрихкодыНоменклатуры._Fld15621RRef
-		AND ШтрихкодыНоменклатуры._Fld27279 = 0x01
+		LEFT JOIN ЕстьЗарегистрированныеШтрихкоды
+		ON МаркируемыеТовары.НоменклатураСсылка = ЕстьЗарегистрированныеШтрихкоды.Номенклатура
 WHERE 
-	ШтрихкодыНоменклатуры._Fld15620 IS NULL
+	ЕстьЗарегистрированныеШтрихкоды.Номенклатура IS NULL
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 /*Размеры корзины в целом для расчета габаритов*/
@@ -698,8 +705,8 @@ SELECT
     SUM(T2._Fld21411) - SUM(T2._Fld21412) AS Количество
 Into #Temp_Remains
 FROM
-    dbo._AccumRgT21444 T2 With (READCOMMITTED)
-	Left Join _AccumRg21407 Цены With (READCOMMITTED)
+    dbo._AccumRgT21444 T2 With (NOLOCK)
+	Left Join _AccumRg21407 Цены With (NOLOCK)
 		Inner Join Temp_ExchangeRates With (NOLOCK)
 			On Цены._Fld21443RRef = Temp_ExchangeRates.Валюта 
 		On T2._Fld21408RRef = Цены._Fld21408RRef
@@ -751,7 +758,7 @@ SELECT --товары по заказу
     Резервирование._Fld21424 AS ДатаСобытия,
     Резервирование._Fld21411 - Резервирование._Fld21412 AS Количество
 FROM
-	_AccumRg21407 Резервирование With (READCOMMITTED)
+	_AccumRg21407 Резервирование With (NOLOCK)
 	Inner Join #Temp_GoodsOrder On
 		Резервирование._RecorderRRef = #Temp_GoodsOrder.ЗаказСсылка
 		And Резервирование._Fld21408RRef = #Temp_GoodsOrder.НоменклатураСсылка
@@ -764,7 +771,7 @@ SELECT Distinct
     T1._Fld23833RRef AS СкладНазначения
 Into #Temp_WarehouseDates
 FROM
-    dbo._InfoRg23830 T1 With (READCOMMITTED)
+    dbo._InfoRg23830 T1 With (NOLOCK)
 	Inner Join #Temp_Remains With (NOLOCK)
 	ON T1._Fld23831RRef = #Temp_Remains.СкладИсточника
 	AND T1._Fld23832 = #Temp_Remains.ДатаСобытия
@@ -784,7 +791,7 @@ SELECT
 	MIN(T1._Fld23834) AS ДатаПрибытия 
 Into #Temp_MinimumWarehouseDates
 FROM
-    dbo._InfoRg23830 T1 With (READCOMMITTED{6}) 
+    dbo._InfoRg23830 T1 With (NOLOCK{6}) 
     Inner Join SourceWarehouses On T1._Fld23831RRef = SourceWarehouses.СкладИсточника	
 WHERE
 	T1._Fld23833RRef IN (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
@@ -917,7 +924,7 @@ Select
 	END,
     ISNULL(#Temp_WarehouseDates.СкладНазначения, #Temp_MinimumWarehouseDates.СкладНазначения) AS СкладНазначения
 From
-	dbo._AccumRg21407 векРезервированиеТоваров With (READCOMMITTED)
+	dbo._AccumRg21407 векРезервированиеТоваров With (NOLOCK)
 		Inner Join  #Temp_GoodsOrder Товары
 		ON (векРезервированиеТоваров._RecorderRRef = Товары.ЗаказСсылка)		
 			AND (векРезервированиеТоваров._RecorderTRef = 0x0000013D) --поменять на правильный тип ЗаказКлиента 
@@ -1072,7 +1079,7 @@ SELECT
 Into #Temp_SourcesWithPrices
 FROM
     #Temp_Sources T1 WITH(NOLOCK)
-    INNER JOIN dbo._AccumRg21407 Резервирование WITH(READCOMMITTED)
+    INNER JOIN dbo._AccumRg21407 Резервирование WITH(NOLOCK)
     LEFT OUTER JOIN Temp_ExchangeRates T3 WITH(NOLOCK)
     ON (Резервирование._Fld21443RRef = T3.Валюта) 
     ON (T1.НоменклатураСсылка = Резервирование._Fld21408RRef)
@@ -1362,7 +1369,7 @@ SELECT
 	CAST(CAST(МощностиДоставки._Period  AS DATE) AS DATETIME) AS Дата
 Into #Temp_DeliveryPower
 FROM
-    dbo._AccumRg25104 МощностиДоставки With (READCOMMITTED),
+    dbo._AccumRg25104 МощностиДоставки With (NOLOCK),
 	#Temp_Size With (NOLOCK),
 	#Temp_TimeService With (NOLOCK)
 WHERE
@@ -1408,7 +1415,7 @@ Select Distinct
 	ГрафикПланирования._Fld23322RRef AS ГруппаПланирования
 Into #Temp_CourierDepartureDates
 From 
-	dbo._InfoRg23320 AS ГрафикПланирования With (READCOMMITTED)
+	dbo._InfoRg23320 AS ГрафикПланирования With (NOLOCK)
 	INNER JOIN #Temp_PlanningGroups T2 With (NOLOCK) ON (ГрафикПланирования._Fld23322RRef = T2.ГруппаПланирования) 
 Where ГрафикПланирования._Fld23321 BETWEEN @P_DateTimePeriodBegin AND @P_DateTimePeriodEnd 
 	AND ГрафикПланирования._Fld23333 > @P_DateTimeNow
@@ -1449,7 +1456,7 @@ SELECT
             ) AS КоличествоЗаказовЗаИнтервалВремени
 into #Temp_IntervalsAll_old
 FROM
-    dbo._AccumRg25110 T5 With (READCOMMITTED)
+    dbo._AccumRg25110 T5 With (NOLOCK)
 	INNER JOIN #Temp_PlanningGroups T2 With (NOLOCK) ON (T5._Fld25112RRef = T2.ГруппаПланирования)
 	AND T2.Склад IN (select СкладНазначения From #Temp_DateAvailable)
 WHERE

@@ -99,6 +99,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     case DatabaseActions.Error:
                         break;
                     case DatabaseActions.None:
+                        _readableDatabaseService.SetPriorityCoefficient(databaseInfo.Connection);
                         break;
                     case DatabaseActions.SendClearCache:
                         if (clearCacheAllowed)
@@ -126,7 +127,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                 {
                     Status = LogStatus.Info,
                     ErrorDescription = "Check and update perfomance - no elastic logs",
-                    DatabaseConnection = databaseInfo.Connection
+                    DatabaseConnection = databaseInfo.ConnectionWithoutCredentials
                 };
                 _logger.LogElastic(logElement);
             }

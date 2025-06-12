@@ -33,6 +33,7 @@ builder.Services.AddApi(configuration);
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddSingleton<DatabaseErrorTracker>();
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()

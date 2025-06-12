@@ -3,6 +3,8 @@
     public interface IReadableDatabase
     {
         public List<DatabaseInfo> GetAllDatabases();
+
+        public IEnumerable<DatabaseInfo> AvailableDatabases();
         public Task<bool> SynchronizeDatabasesListFromFile(List<DatabaseInfo> newDatabases);
         public Task<bool> AddDatabase(DatabaseInfo newDatabaseEntity);
         public bool DeleteDatabase(string connection);
@@ -17,5 +19,6 @@
         public bool UpdateDatabaseLastAvailabilityCheckTime(string connection);
         public bool UpdateDatabaseLastAggregationCheckTime(string connection);
         public bool UpdateDatabaseLastPerfomanceCheckTime(string connection);
+        public bool SetPriorityCoefficient(string connection, double priorityCoefficient = 0);
     }
 }

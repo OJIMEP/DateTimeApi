@@ -1,4 +1,5 @@
-﻿using DateTimeService.Application.Logging;
+﻿using DateTimeService.Application.Database.DatabaseManagement;
+using DateTimeService.Application.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Net;
@@ -8,10 +9,12 @@ namespace DateTimeService.Api.Middlewares
     public class GlobalExceptionHandlingMiddleware : IMiddleware
     {
         private readonly ILogger<GlobalExceptionHandlingMiddleware> _logger;
+        private readonly DatabaseErrorTracker _errorTracker;
 
-        public GlobalExceptionHandlingMiddleware(ILogger<GlobalExceptionHandlingMiddleware> logger)
+        public GlobalExceptionHandlingMiddleware(ILogger<GlobalExceptionHandlingMiddleware> logger, DatabaseErrorTracker errorTracker)
         {
             _logger = logger;
+            _errorTracker = errorTracker;
         }
 
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
@@ -36,6 +39,10 @@ namespace DateTimeService.Api.Middlewares
                 logElement.TimeFullExecution = watch.ElapsedMilliseconds;
 
                 _logger.LogElastic(logElement);
+
+                var connectionString = context.Items.TryGetValue("ConnectionString", out object? connection) ? (string)(connection ?? "") : "";
+                _errorTracker.ReportError(connectionString);
+
 
                 if (ex is ValidationException)
                 {

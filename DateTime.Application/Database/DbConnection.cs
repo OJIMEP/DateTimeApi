@@ -9,6 +9,7 @@ namespace DateTimeService.Application.Database
         public bool UseAggregations { get; set; }
         public string ConnectionWithoutCredentials { get; set; } = "";
         public long ConnectTimeInMilliseconds { get; set; }
+        public string ConnectionString { get; set; } = "";
     }
 
     public enum DatabaseType
@@ -16,5 +17,13 @@ namespace DateTimeService.Application.Database
         Main,
         ReplicaFull,
         ReplicaTables
+    }
+
+    public enum ServiceEndpoint
+    {
+        AvailableDate,
+        IntervalList,
+        AvailableDeliveryTypes,
+        All
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace DateTimeService.Contracts.Responses
+﻿using System.Net;
+
+namespace DateTimeService.Contracts.Responses
 {
     public class DatabaseStatusListResponse
     {
@@ -13,5 +15,7 @@
         public bool CustomAggregationsAvailable { get; set; }
         public int CustomAggsFailCount { get; set; }
         public int TimeCriteriaFailCount { get; set; }
+        public List<string> EndpointList { get; set; }
+        public double PriorityCoefficient { get; set; }
     }
 }

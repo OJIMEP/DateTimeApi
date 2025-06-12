@@ -30,7 +30,7 @@ namespace DateTimeService.Api.Controllers
 
             try
             {
-                var dbConnection = await _dbConnectionFactory.CreateConnectionAsync(token);
+                var dbConnection = await _dbConnectionFactory.CreateConnectionAsync(token: token);
                 conn = dbConnection.Connection;
             }
             catch

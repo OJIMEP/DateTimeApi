@@ -4,7 +4,6 @@ using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -41,7 +40,7 @@ namespace DateTimeService.Application.Repositories
                 return resultDict;
             }
 
-            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token: token);
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDate, token: token);
 
             IEnumerable<AvailableDateRecord> dbResult;
 
@@ -137,7 +136,7 @@ namespace DateTimeService.Application.Repositories
             bool deliveryTypeAvailable;
             long elapsedMs;
 
-            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token);
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDeliveryTypes, token);
 
             using (var connection = dbConnection.Connection)
             {
@@ -172,7 +171,7 @@ namespace DateTimeService.Application.Repositories
         {
             var result = new IntervalListResult();
 
-            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token);
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.IntervalList, token);
 
             bool adressExists;
             string zoneId;

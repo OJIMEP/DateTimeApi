@@ -136,7 +136,9 @@ namespace DateTimeService.Api.Mapping
                 LastCheckPerfomance = result.LastCheckPerfomance,
                 CustomAggregationsAvailable = result.CustomAggregationsAvailable,
                 CustomAggsFailCount = result.CustomAggsFailCount,
-                TimeCriteriaFailCount = result.TimeCriteriaFailCount
+                TimeCriteriaFailCount = result.TimeCriteriaFailCount,
+                EndpointList = result.EndpointsList.Select(endpoint => endpoint.ToString()).ToList(),
+                PriorityCoefficient = result.PriorityCoefficient
             };
         }
 

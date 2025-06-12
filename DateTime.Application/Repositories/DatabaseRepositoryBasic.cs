@@ -41,7 +41,7 @@ namespace DateTimeService.Application.Repositories
                 return resultDict;
             }
 
-            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token: token);
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDate, token: token);
 
             List<AvailableDateRecord> dbResult = new();
 
@@ -138,7 +138,7 @@ namespace DateTimeService.Application.Repositories
         {
             var result = new IntervalListResult();
 
-            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token);
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.IntervalList, token);
 
             bool adressExists;
             string zoneId;
@@ -228,7 +228,7 @@ namespace DateTimeService.Application.Repositories
             bool deliveryTypeAvailable;
             long elapsedMs;
 
-            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(token);
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDeliveryTypes, token);
 
             using (var connection = dbConnection.Connection)
             {

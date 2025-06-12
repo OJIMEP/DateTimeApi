@@ -232,11 +232,66 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             return updateResult;
         }
 
+        public bool SetPriorityCoefficient(string connection, double newValue = 0)
+        {
+            bool updateResult;
+            try
+            {
+                var getResult = dbDictionary.TryGetValue(connection, out DatabaseInfo currentDatabaseEntity);
+                if (getResult)
+                {
+                    if (newValue == 0)
+                    {
+                        if (currentDatabaseEntity.PriorityCoefficient < 1)
+                        {
+                            newValue = Math.Min(currentDatabaseEntity.PriorityCoefficient + 0.1, 1);
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+
+                    if (currentDatabaseEntity.PriorityCoefficient == newValue)
+                    {
+                        return true;
+                    }
+
+                    var changedEntity = (DatabaseInfo)currentDatabaseEntity.Clone();
+                    changedEntity.PriorityCoefficient = newValue;
+
+                    updateResult = dbDictionary.TryUpdate(connection, changedEntity, currentDatabaseEntity);
+
+                    if (updateResult)
+                    {
+                        //LogUpdatedChanges(newDatabaseEntity.ConnectionWithoutCredentials, "Priority changed", $"New priority = {newDatabaseEntity.Priority}");   
+                    }
+                    else
+                        throw new Exception("Database update failed");
+                }
+                else
+                    throw new Exception("Database not found");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogElastic("Updating database failed", ex);
+                updateResult = false;
+            }
+
+            return updateResult;
+        }
+
         public List<DatabaseInfo> GetAllDatabases()
         {
             var result = dbDictionary.Values.ToList();
 
             return result;
+        }
+
+        public IEnumerable<DatabaseInfo> AvailableDatabases()
+        {
+            return dbDictionary.Values.ToList().Where(x => x.AvailableToUse);
         }
 
         public async Task<bool> SynchronizeDatabasesListFromFile(List<DatabaseInfo> newDatabases)
