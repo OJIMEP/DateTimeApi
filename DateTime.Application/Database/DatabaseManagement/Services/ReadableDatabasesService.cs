@@ -368,12 +368,24 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                 {
                     bool changedPriority = newDatabaseEntity.Priority != currentDatabaseEntity.Priority;
                     bool changedType = newDatabaseEntity.Type != currentDatabaseEntity.Type;
+                    bool changedEndpoints = newDatabaseEntity.Endpoints != currentDatabaseEntity.Endpoints;
 
-                    if (changedPriority || changedType)
+                    if (changedPriority || changedType || changedEndpoints)
                     {
                         var changedEntity = (DatabaseInfo)currentDatabaseEntity.Clone();
                         changedEntity.Priority = newDatabaseEntity.Priority;
                         changedEntity.Type = newDatabaseEntity.Type;
+                        changedEntity.Endpoints = newDatabaseEntity.Endpoints;
+                        if (changedEntity.Endpoints is not null)
+                        {
+                            changedEntity.EndpointsList = changedEntity.Endpoints.Split(",")
+                                .Select(s => (ServiceEndpoint)Enum.Parse(typeof(ServiceEndpoint), s.Trim(), ignoreCase: true))
+                                .ToList();
+                        }
+                        else
+                        {
+                            changedEntity.EndpointsList = new List<ServiceEndpoint> { ServiceEndpoint.All };
+                        }
                         updateResult = dbDictionary.TryUpdate(newDatabaseEntity.Connection, changedEntity, currentDatabaseEntity);
 
                         if (updateResult)
@@ -385,6 +397,10 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                             if (changedType)
                             {
                                 LogUpdatedChanges(newDatabaseEntity.ConnectionWithoutCredentials, "Priority changed", $"New priority = {newDatabaseEntity.Priority}");
+                            }
+                            if (changedEndpoints)
+                            {
+                                LogUpdatedChanges(newDatabaseEntity.ConnectionWithoutCredentials, "Endpoints changed", $"New endpoints = {newDatabaseEntity.Endpoints}");
                             }
                         }
                         else

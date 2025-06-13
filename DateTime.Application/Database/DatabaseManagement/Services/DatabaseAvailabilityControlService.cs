@@ -185,6 +185,12 @@ namespace DateTimeService.Application.Database.DatabaseManagement
         {
             bool result = false;
 
+            if (databaseInfo.DatabaseType == DatabaseType.Main
+                || databaseInfo.DatabaseType == DatabaseType.ReplicaFull)
+            {
+                return result;
+            }
+
             try
             {
                 using SqlConnection conn = new(databaseInfo.Connection);

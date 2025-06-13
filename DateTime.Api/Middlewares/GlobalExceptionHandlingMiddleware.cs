@@ -37,6 +37,7 @@ namespace DateTimeService.Api.Middlewares
 
                 watch.Stop();
                 logElement.TimeFullExecution = watch.ElapsedMilliseconds;
+                logElement.CallStack = ex.StackTrace;
 
                 _logger.LogElastic(logElement);
 

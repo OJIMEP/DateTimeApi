@@ -24,6 +24,7 @@ namespace DateTimeService.Application.Logging
         public Dictionary<string, string> AdditionalData { get; set; }
         public int TotalItems { get; set; }
         public double FromCachePercent { get; set; }
+        public string? CallStack { get; set; }
 
         public ElasticLogElement()
         {

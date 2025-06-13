@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Concurrent;
 
 namespace DateTimeService.Application.Database.DatabaseManagement
 {
@@ -9,6 +10,7 @@ namespace DateTimeService.Application.Database.DatabaseManagement
         private readonly IReadableDatabase _readableDatabaseService;
         private readonly IConfiguration _configuration;
         private readonly int _maxErrorsPerMinute;
+        private readonly TimeSpan _windowSize = TimeSpan.FromMinutes(1);
 
         public DatabaseErrorTracker(IMemoryCache cache, IReadableDatabase readableDatabaseService, IConfiguration configuration)
         {
@@ -26,23 +28,32 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                 return;
             }
 
-            // Получаем текущее количество ошибок
-            var errorCount = _cache.GetOrCreate(connectionString, entry =>
+            if (_maxErrorsPerMinute == 0)
             {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1); // Сброс через 1 минуту
-                return 0;
-            });
-
-            errorCount++;
-            
-            // Если превышен лимит — устанавливаем пониженный приоритет
-            if (errorCount >= _maxErrorsPerMinute)
-            {
-                _readableDatabaseService.SetPriorityCoefficient(connectionString, 0.5);
-                errorCount = 0;
+                return;
             }
 
-            _cache.Set(connectionString, errorCount);
+           var errors = _cache.GetOrCreate(connectionString, entry =>
+            {
+                entry.SlidingExpiration = _windowSize;
+                return new ConcurrentQueue<DateTime>();
+            });
+
+            var now = DateTime.UtcNow;
+            var cutoffTime = now - _windowSize;
+            int maxIterations = Math.Min(_maxErrorsPerMinute * 2, errors.Count); // Защита от бесконечного цикла
+            while (maxIterations-- > 0 && errors.TryPeek(out var timestamp) && timestamp < cutoffTime)
+            {
+                errors.TryDequeue(out _);
+            }
+
+            errors.Enqueue(now);
+
+            // Если превышен лимит — устанавливаем пониженный приоритет
+            if (errors.Count >= _maxErrorsPerMinute)
+            {
+                _readableDatabaseService.SetPriorityCoefficient(connectionString, 0.5);
+            }
         }
     }
 }
