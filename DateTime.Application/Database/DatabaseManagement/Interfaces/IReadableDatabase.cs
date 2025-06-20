@@ -20,5 +20,9 @@
         public bool UpdateDatabaseLastAggregationCheckTime(string connection);
         public bool UpdateDatabaseLastPerfomanceCheckTime(string connection);
         public bool SetPriorityCoefficient(string connection, double priorityCoefficient = 0);
+        public bool UpdateLastRecompileAvailableDate(string connection);
+        public bool UpdateLastRecompileIntervalList(string connection);
+        public DateTimeOffset GetLastRecompileAvailableDate(string connection);
+        public DateTimeOffset GetLastRecompileIntervalList(string connection);
     }
 }

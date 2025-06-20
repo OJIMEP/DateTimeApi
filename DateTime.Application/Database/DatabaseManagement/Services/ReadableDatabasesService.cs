@@ -81,40 +81,43 @@ namespace DateTimeService.Application.Database.DatabaseManagement
 
         public bool DisableDatabase(string connection, string reason = "")
         {
-            bool updateResult;
-            try
-            {
-                var getResult = dbDictionary.TryGetValue(connection, out DatabaseInfo currentDatabaseEntity);
-                if (getResult)
-                {
-                    if (!currentDatabaseEntity.AvailableToUse)
-                    {
-                        return true;
-                    }
+            // Не отключаем базы, снижаем приоритет
+            return true;
 
-                    var changedEntity = (DatabaseInfo)currentDatabaseEntity.Clone();
-                    changedEntity.AvailableToUse = false;
+            //bool updateResult;
+            //try
+            //{
+            //    var getResult = dbDictionary.TryGetValue(connection, out DatabaseInfo currentDatabaseEntity);
+            //    if (getResult)
+            //    {
+            //        if (!currentDatabaseEntity.AvailableToUse)
+            //        {
+            //            return true;
+            //        }
 
-                    updateResult = dbDictionary.TryUpdate(connection, changedEntity, currentDatabaseEntity);
+            //        var changedEntity = (DatabaseInfo)currentDatabaseEntity.Clone();
+            //        changedEntity.AvailableToUse = false;
 
-                    if (updateResult)
-                    {
-                        LogUpdatedChanges(changedEntity.ConnectionWithoutCredentials, $"Database disabled due to {reason}", "");
-                    }
-                    else
-                        throw new Exception("Database update failed");
-                }
-                else
-                    throw new Exception("Database not found");
+            //        updateResult = dbDictionary.TryUpdate(connection, changedEntity, currentDatabaseEntity);
 
-            }
-            catch (Exception ex)
-            {
-                _logger.LogElastic("Updating database failed", ex);
-                updateResult = false;
-            }
+            //        if (updateResult)
+            //        {
+            //            LogUpdatedChanges(changedEntity.ConnectionWithoutCredentials, $"Database disabled due to {reason}", "");
+            //        }
+            //        else
+            //            throw new Exception("Database update failed");
+            //    }
+            //    else
+            //        throw new Exception("Database not found");
 
-            return updateResult;
+            //}
+            //catch (Exception ex)
+            //{
+            //    _logger.LogElastic("Updating database failed", ex);
+            //    updateResult = false;
+            //}
+
+            //return updateResult;
         }
 
         public bool DisableDatabaseAggs(string connection, string reason = "")
@@ -577,6 +580,100 @@ namespace DateTimeService.Application.Database.DatabaseManagement
             }
 
             return updateResult;
+        }
+
+        public bool UpdateLastRecompileAvailableDate(string connection)
+        {
+            bool updateResult;
+            try
+            {
+                var getResult = dbDictionary.TryGetValue(connection, out DatabaseInfo currentDatabaseEntity);
+                if (getResult)
+                {
+                    var changedEntity = (DatabaseInfo)currentDatabaseEntity.Clone();
+                    changedEntity.LastRecompileAvailableDate = DateTimeOffset.Now;
+
+                    updateResult = dbDictionary.TryUpdate(connection, changedEntity, currentDatabaseEntity);
+
+                    if (!updateResult)
+                        throw new Exception("Database update failed");
+                }
+                else
+                    throw new Exception("Database not found");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogElastic("Updating database failed", ex);
+                updateResult = false;
+            }
+
+            return updateResult;
+        }
+
+        public bool UpdateLastRecompileIntervalList(string connection)
+        {
+            bool updateResult;
+            try
+            {
+                var getResult = dbDictionary.TryGetValue(connection, out DatabaseInfo currentDatabaseEntity);
+                if (getResult)
+                {
+                    var changedEntity = (DatabaseInfo)currentDatabaseEntity.Clone();
+                    changedEntity.LastRecompileIntervalList = DateTimeOffset.Now;
+
+                    updateResult = dbDictionary.TryUpdate(connection, changedEntity, currentDatabaseEntity);
+
+                    if (!updateResult)
+                        throw new Exception("Database update failed");
+                }
+                else
+                    throw new Exception("Database not found");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogElastic("Updating database failed", ex);
+                updateResult = false;
+            }
+
+            return updateResult;
+        }
+
+        public DateTimeOffset GetLastRecompileAvailableDate(string connection)
+        {
+            DateTimeOffset result = DateTimeOffset.Now;
+            try
+            {
+                var getResult = dbDictionary.TryGetValue(connection, out DatabaseInfo currentDatabaseEntity);
+                if (getResult)
+                {
+                    return currentDatabaseEntity.LastRecompileAvailableDate;
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return result;
+        }
+
+        public DateTimeOffset GetLastRecompileIntervalList(string connection)
+        {
+            DateTimeOffset result = DateTimeOffset.Now;
+            try
+            {
+                var getResult = dbDictionary.TryGetValue(connection, out DatabaseInfo currentDatabaseEntity);
+                if (getResult)
+                {
+                    return currentDatabaseEntity.LastRecompileIntervalList;
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return result;
         }
 
         private void LogUpdatedChanges(string connectionName, string description, string updateDesc, LogStatus status = LogStatus.Ok)

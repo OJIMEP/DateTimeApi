@@ -2,14 +2,123 @@
 {
     public static class AvailableDateQueries
     {
+
+        //        public const string AvailableDate1 = @"
+        //-- Шаг 1: Разбираем строку PickupPoint на отдельные пункты выдачи
+        //WITH ParsedPickupPoints AS (
+        //    SELECT 
+        //        g.Article,
+        //        g.PickupPoint AS OriginalPickupPoints,
+        //        TRIM(s.value) AS SinglePickupPoint
+        //    FROM 
+        //        #Temp_GoodsRaw g
+        //    CROSS APPLY 
+        //        STRING_SPLIT(g.PickupPoint, ',') s
+        //    WHERE 
+        //        g.PickupPoint IS NOT NULL
+        //),
+        //-- Шаг 2: Считаем популярность каждого пункта выдачи (сколько Article на него ссылается)
+        //PickupPointPopularity AS (
+        //    SELECT 
+        //		SinglePickupPoint,
+        //        Склады._IDRRef AS СкладСсылка,
+        //        COUNT(DISTINCT Article) AS Popularity
+        //    FROM 
+        //        ParsedPickupPoints
+        //		INNER JOIN dbo._Reference226 Склады WITH (NOLOCK)
+        //		ON SinglePickupPoint = Склады._Fld19544
+        //    GROUP BY 
+        //		SinglePickupPoint,
+        //        Склады._IDRRef 
+        //),
+        //-- Шаг 3: Для каждого оригинального списка PickupPoint получаем все возможные пункты
+        //OriginalPickupLists AS (
+        //    SELECT DISTINCT
+        //        OriginalPickupPoints
+        //    FROM 
+        //        ParsedPickupPoints
+        //),
+        //-- Шаг 4: Для каждого списка ранжируем пункты по популярности
+        //RankedPickupPoints AS (
+        //    SELECT 
+        //        op.OriginalPickupPoints,
+        //        pp.СкладСсылка,
+        //		ROW_NUMBER() OVER(
+        //            PARTITION BY op.OriginalPickupPoints 
+        //            ORDER BY pp.Popularity DESC, pp.SinglePickupPoint
+        //        ) AS RowNum
+        //    FROM 
+        //        OriginalPickupLists op
+        //    CROSS APPLY (
+        //        SELECT 
+        //            p.SinglePickupPoint,
+        //			pop.СкладСсылка,
+        //            pop.Popularity
+        //        FROM 
+        //            ParsedPickupPoints p
+        //            JOIN PickupPointPopularity pop ON p.SinglePickupPoint = pop.SinglePickupPoint
+        //        WHERE 
+        //            p.OriginalPickupPoints = op.OriginalPickupPoints
+        //        GROUP BY
+        //            p.SinglePickupPoint,
+        //			pop.СкладСсылка,
+        //            pop.Popularity
+        //    ) pp
+        //)
+
+        //-- Шаг 5: Выбираем топ-5 самых популярных пунктов для каждого списка (по отдельным строкам)
+        //SELECT 
+        //    r.OriginalPickupPoints AS СписокПВЗ,
+        //	r.СкладСсылка
+        //INTO #Temp_ParsedPickupPoints
+        //FROM 
+        //    RankedPickupPoints r
+        //WHERE 
+        //    r.RowNum <= 5
+        //OPTION (KEEP PLAN, KEEPFIXED PLAN)
+        //;
+
         public const string AvailableDate1 = @"
-Select 
-	Склады._IDRRef AS СкладСсылка,
-	Склады._Fld19544 AS ERPКодСклада
-Into #Temp_PickupPoints
-From 
-	dbo._Reference226 Склады WITH(NOLOCK)
-Where Склады._Fld19544 in({0});
+WITH ParsedPickupPoints AS (
+    SELECT DISTINCT g.PickupPoint As OriginalPickupPoints, s.value AS Code
+    FROM (
+        SELECT DISTINCT PickupPoint 
+        FROM #Temp_GoodsRaw 
+        WHERE PickupPoint IS NOT NULL
+    ) AS g
+    CROSS APPLY STRING_SPLIT(g.PickupPoint, ',') s
+),
+RankedWarehouses AS (
+    SELECT
+        pp.OriginalPickupPoints AS СписокПВЗ,
+        Склады._IDRRef AS СкладСсылка,
+        Склады._Fld19544 AS ERPКодСклада,
+        ROW_NUMBER() OVER(PARTITION BY pp.OriginalPickupPoints ORDER BY Склады._IDRRef) AS RowNum
+    FROM 
+        dbo._Reference226 Склады WITH (NOLOCK)
+        INNER JOIN ParsedPickupPoints pp ON Склады._Fld19544 = pp.Code
+)
+SELECT
+    СписокПВЗ,
+    СкладСсылка,
+    ERPКодСклада
+INTO #Temp_ParsedPickupPoints
+FROM 
+    RankedWarehouses
+WHERE 
+    RowNum <= 4
+ORDER BY 
+    СписокПВЗ, ERPКодСклада
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
+;
+
+SELECT DISTINCT 
+	T1.СкладСсылка
+INTO #Temp_PickupPoints
+FROM 
+	#Temp_ParsedPickupPoints T1 WITH (NOLOCK)
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
+;
  
 Select
 	IsNull(_Reference114_VT23370._Fld23372RRef,Геозона._Fld23104RRef) As СкладСсылка,
@@ -85,66 +194,54 @@ From
 		And Номенклатура._IDRRef = Упаковки._OwnerID_RRRef		
 		And Упаковки._Fld6003RRef = Номенклатура._Fld3489RRef
 		And Упаковки._Marked = 0x00
-OPTION (KEEP PLAN, KEEPFIXED PLAN);
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
+;
 
-WITH cte AS (
-    SELECT distinct value AS PickupPoint
-    FROM #Temp_GoodsRaw t1
-    CROSS APPLY (
-        SELECT value
-        FROM STRING_SPLIT(t1.PickupPoint, ',')
-		WHERE t1.PickupPoint is not null
-    ) t2
-)
-SELECT Distinct
-    t1.Article, t1.code, cte.PickupPoint
-INTO #Temp_GoodsRawParsed
-FROM #Temp_GoodsRaw t1
-Left JOIN cte
-    ON t1.PickupPoint is not null;
+SELECT 
+    Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
+    Номенклатура.code AS code,
+    Номенклатура.article AS article,
+    Номенклатура.ЕдиницаИзмерения AS ЕдиницаИзмерения,
+    Номенклатура.Габариты AS Габариты,
+    #Temp_ParsedPickupPoints.СкладСсылка AS СкладПВЗСсылка,
+    Номенклатура.УпаковкаСсылка AS УпаковкаСсылка,
+    Номенклатура.Вес AS Вес,
+    Номенклатура.Объем AS Объем,
+    Номенклатура.ТНВЭДСсылка AS ТНВЭДСсылка,
+    Номенклатура.ТоварнаяКатегорияСсылка AS ТоварнаяКатегорияСсылка
+INTO 
+    #Temp_GoodsBegin
+FROM
+    #Temp_GoodsRaw T1
+    INNER JOIN #Temp_GoodsPackages Номенклатура
+    ON T1.code IS NULL 
+        AND T1.Article = Номенклатура.article
+    LEFT JOIN #Temp_ParsedPickupPoints  
+        ON T1.PickupPoint = #Temp_ParsedPickupPoints.СписокПВЗ
 
-Select 
-	Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
-	Номенклатура.code AS code,
-	Номенклатура.article AS article,
-	Номенклатура.ЕдиницаИзмерения AS ЕдиницаИзмерения,
-	Номенклатура.Габариты AS Габариты,
-	T1.PickupPoint,
-	#Temp_PickupPoints.СкладСсылка AS СкладПВЗСсылка,
-	Номенклатура.УпаковкаСсылка AS УпаковкаСсылка,
-	Номенклатура.Вес AS Вес,
-	Номенклатура.Объем AS Объем,
-	Номенклатура.ТНВЭДСсылка as ТНВЭДСсылка,
-    Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка
-INTO #Temp_GoodsBegin
-From
-	#Temp_GoodsRawParsed T1
-	Inner Join 	#Temp_GoodsPackages Номенклатура
-		ON T1.code is NULL and T1.Article = Номенклатура.article
-	Left Join #Temp_PickupPoints  
-		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
-Union all
-Select 
-	Номенклатура.НоменклатураСсылка,
-	Номенклатура.code,
-	Номенклатура.article,
-	Номенклатура.ЕдиницаИзмерения,
-	Номенклатура.Габариты,
-	T1.PickupPoint,
-	#Temp_PickupPoints.СкладСсылка,
-	Номенклатура.УпаковкаСсылка AS УпаковкаСсылка,
-	Номенклатура.Вес AS Вес,
-	Номенклатура.Объем AS Объем,
-    Номенклатура.ТНВЭДСсылка as ТНВЭДСсылка,
-    Номенклатура.ТоварнаяКатегорияСсылка as ТоварнаяКатегорияСсылка
-From 
-	#Temp_GoodsRawParsed T1
-	Inner Join 	#Temp_GoodsPackages Номенклатура With (NOLOCK) 
-		ON T1.code is not NULL and T1.code = Номенклатура.code
-	Left Join #Temp_PickupPoints  
-		ON T1.PickupPoint = #Temp_PickupPoints.ERPКодСклада
+UNION ALL
 
-OPTION (KEEP PLAN, KEEPFIXED PLAN);
+SELECT 
+    Номенклатура.НоменклатураСсылка,
+    Номенклатура.code,
+    Номенклатура.article,
+    Номенклатура.ЕдиницаИзмерения,
+    Номенклатура.Габариты,
+    #Temp_ParsedPickupPoints.СкладСсылка,
+    Номенклатура.УпаковкаСсылка AS УпаковкаСсылка,
+    Номенклатура.Вес AS Вес,
+    Номенклатура.Объем AS Объем,
+    Номенклатура.ТНВЭДСсылка AS ТНВЭДСсылка,
+    Номенклатура.ТоварнаяКатегорияСсылка AS ТоварнаяКатегорияСсылка
+FROM 
+    #Temp_GoodsRaw T1
+    INNER JOIN #Temp_GoodsPackages Номенклатура WITH (NOLOCK) 
+    ON T1.code IS NOT NULL 
+        AND T1.code = Номенклатура.code
+    LEFT JOIN #Temp_ParsedPickupPoints
+	ON T1.PickupPoint = #Temp_ParsedPickupPoints.СписокПВЗ
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
+;
 
 Select 
 	Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
@@ -303,19 +400,38 @@ HAVING
     AND SUM(T2._Fld21411) - SUM(T2._Fld21412) > 0.0
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimeNow='{1}'),KEEP PLAN, KEEPFIXED PLAN);
 
-SELECT Distinct
-    T1._Fld23831RRef AS СкладИсточника,
-    T1._Fld23832 AS ДатаСобытия,
-    T1._Fld23834 AS ДатаПрибытия,
-    T1._Fld23833RRef AS СкладНазначения
-Into #Temp_WarehouseDates
-FROM
-    dbo._InfoRg23830 T1 With (NOLOCK)
-	Inner Join #Temp_Remains With (NOLOCK)
-	ON T1._Fld23831RRef = #Temp_Remains.СкладИсточника
-	AND T1._Fld23832 = #Temp_Remains.ДатаСобытия
-	AND T1._Fld23833RRef IN (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
-OPTION (KEEP PLAN, KEEPFIXED PLAN);";
+WITH Склады AS (
+	SELECT 
+		СкладСсылка 
+	FROM #Temp_GeoData 
+
+	UNION ALL 
+
+	SELECT 
+		СкладСсылка
+	FROM #Temp_PickupPoints
+),
+SourceStocks AS (
+    SELECT DISTINCT
+        T1.СкладИсточника,
+		T1.ДатаСобытия
+    FROM #Temp_Remains T1 WITH (NOLOCK)
+	WHERE T1.ДатаСобытия <> '2001-01-01 00:00:00'
+)
+SELECT
+    ПрогнозныеДатыПоставокНаСклады._Fld23831RRef AS СкладИсточника,
+    ПрогнозныеДатыПоставокНаСклады._Fld23832 AS ДатаСобытия,
+    ПрогнозныеДатыПоставокНаСклады._Fld23834 AS ДатаПрибытия,
+    ПрогнозныеДатыПоставокНаСклады._Fld23833RRef AS СкладНазначения
+INTO #Temp_WarehouseDates
+FROM dbo._InfoRg23830 ПрогнозныеДатыПоставокНаСклады WITH (NOLOCK)
+	INNER JOIN SourceStocks 
+    ON ПрогнозныеДатыПоставокНаСклады._Fld23831RRef = SourceStocks.СкладИсточника
+		AND ПрогнозныеДатыПоставокНаСклады._Fld23832 = SourceStocks.ДатаСобытия
+	INNER JOIN Склады WITH (NOLOCK)
+    ON ПрогнозныеДатыПоставокНаСклады._Fld23833RRef = Склады.СкладСсылка
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
+;";
 
         public const string AvailableDate2MinimumWarehousesBasic = @"With SourceWarehouses AS
 (
@@ -334,7 +450,7 @@ FROM
     Inner Join SourceWarehouses On T1._Fld23831RRef = SourceWarehouses.СкладИсточника
 WHERE
     T1._Fld23833RRef IN (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
-		AND	T1._Fld23832 BETWEEN @P_DateTimeNow AND DateAdd(DAY,6,@P_DateTimeNow)
+		AND	T1._Fld23832 BETWEEN @P_DateTimeNow AND @P_DateTimePeriodEnd --DateAdd(DAY,6,@P_DateTimeNow)
 GROUP BY T1._Fld23831RRef,
 T1._Fld23833RRef
 OPTION (HASH GROUP, OPTIMIZE FOR (@P_DateTimeNow='{1}'), KEEP PLAN, KEEPFIXED PLAN);";
@@ -344,7 +460,8 @@ SELECT Distinct
 	T2.СкладИсточника AS СкладИсточника
 FROM
 	#Temp_Remains T2 WITH(NOLOCK)
-)
+),
+Stocks AS (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
 SELECT
 	T1.СкладИсточника AS СкладИсточника,
 	T1.СкладНазначения AS СкладНазначения,
@@ -353,9 +470,11 @@ Into #Temp_MinimumWarehouseDates
 FROM
     [dbo].[WarehouseDatesAggregate] T1 With (NOLOCK{7})
     Inner Join SourceWarehouses On T1.СкладИсточника = SourceWarehouses.СкладИсточника
+	Inner Join Stocks ON Stocks.СкладСсылка = T1.СкладНазначения
 WHERE
-    T1.СкладНазначения IN (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
-		AND	T1.ДатаСобытия BETWEEN @P_DateTimeNow AND DateAdd(DAY,6,@P_DateTimeNow)
+    --T1.СкладНазначения IN (Select СкладСсылка From #Temp_GeoData UNION ALL Select СкладСсылка From #Temp_PickupPoints)
+	--AND	
+	T1.ДатаСобытия BETWEEN @P_DateTimeNow AND @P_DateTimePeriodEnd --DateAdd(DAY,6,@P_DateTimeNow)
 GROUP BY T1.СкладИсточника,
 T1.СкладНазначения
 OPTION (OPTIMIZE FOR (@P_DateTimeNow='{1}'), KEEP PLAN, KEEPFIXED PLAN);";
@@ -456,7 +575,8 @@ From dbo._InfoRg25217 СмещениеДатДоставки With (NOLOCK)
 	Inner Join #Temp_PickupPoints PickupPoints
 	On PickupPoints.СкладСсылка = СмещениеДатДоставки._Fld25220RRef
 	And СмещениеДатДоставки._Fld25218 <= @P_DateTimeNow
-	And СмещениеДатДоставки._Fld25219 >= @P_DateTimeNow;";
+	And СмещениеДатДоставки._Fld25219 >= @P_DateTimeNow
+OPTION (KEEP PLAN, KEEPFIXED PLAN);";
 
         public const string AvailableDate5 = @"
 
@@ -800,7 +920,6 @@ FROM Temp_PickupDatesGroup f
     FROM cteTally
     ORDER BY N) t
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
-	;
 
 Select 
 	DATEADD(
@@ -837,6 +956,7 @@ Where
 			then ПВЗГрафикРаботы._Fld25265 
 		else 0 --не найдено ни графика ни изменения графика  
 	end = 0x00  -- не выходной
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
 ;
 
 SELECT
@@ -1040,7 +1160,8 @@ OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), 
 Select Distinct ГруппаПланирования, ОсновнаяГруппаПланирования, Приоритет
 Into #Temp_PlanningGroups
 From #Temp_Goods t1
-Where СкладСсылка is null;
+Where СкладСсылка is null
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select Distinct 
 	t1.ГруппаПланирования, 
@@ -1051,13 +1172,15 @@ Select Distinct
 Into #Temp_PlanningGroupsPriority
 From #Temp_PlanningGroups t1
 	Left Join #Temp_Intervals t2
-	On t1.ОсновнаяГруппаПланирования = t2.ГруппаПланирования;
+	On t1.ОсновнаяГруппаПланирования = t2.ГруппаПланирования
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select ВремяНачала, Период, t1.ГруппаПланирования, Геозона, t2.Приоритет
 Into #Temp_IntervalsWithGroupPriority
 From #Temp_Intervals t1
 	Inner Join #Temp_PlanningGroupsPriority t2
-	On t1.ГруппаПланирования = t2.ГруппаПланирования;
+	On t1.ГруппаПланирования = t2.ГруппаПланирования
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 ";
 
         public const string AvailableDate8DeliveryPowerBasic = @"With Temp_DeliveryPower AS
@@ -1156,6 +1279,7 @@ From
 	#Temp_GeoData Геозоны
 	Inner Join _Reference114_VT30388 ИнтервалыДоставкиВВашеВремя WITH(NOLOCK)
 		On ИнтервалыДоставкиВВашеВремя._Reference114_IDRRef = Геозоны.Геозона
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
 ;
 
 Select 
@@ -1169,17 +1293,27 @@ From
 	FULL Join #Temp_AvailablePickUp 
 		On #Temp_AvailableCourier.НоменклатураСсылка = #Temp_AvailablePickUp.НоменклатураСсылка
 	LEFT OUTER JOIN #Temp_YourTimeInterval
-		On 1 = 1";
+		On 1 = 1
+OPTION (KEEP PLAN, KEEPFIXED PLAN)";
 
         public const string AvailableDateWithCount1 = @"
+WITH cte AS (
+    SELECT distinct value AS PickupPoint
+    FROM #Temp_GoodsRaw t1
+    CROSS APPLY (
+        SELECT value
+        FROM STRING_SPLIT(t1.PickupPoint, ',')
+		WHERE t1.PickupPoint is not null
+    ) t2
+)
 Select 
 	Склады._IDRRef AS СкладСсылка,
 	Склады._Fld19544 AS ERPКодСклада
 Into #Temp_PickupPoints
 From 
 	dbo._Reference226 Склады WITH(NOLOCK)
-Where Склады._Fld19544 in({0})
- 
+Where Склады._Fld19544 in (select PickupPoint from cte)
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select
 	IsNull(_Reference114_VT23370._Fld23372RRef,Геозона._Fld23104RRef) As СкладСсылка,
@@ -1279,7 +1413,8 @@ SELECT Distinct
 INTO #Temp_GoodsRawParsed
 FROM #Temp_GoodsRaw t1
 Left JOIN cte
- ON t1.PickupPoint is not null;
+ ON t1.PickupPoint is not null
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select 
 	Номенклатура.НоменклатураСсылка AS НоменклатураСсылка,
@@ -1643,7 +1778,8 @@ Group By
 	T1.НоменклатураСсылка,
 	T1.ЭтоСклад,
 	T1.Источник_RRRef,
-	T1.Количество;
+	T1.Количество
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 With TempSourcesGrouped AS
 (
@@ -1672,7 +1808,8 @@ Group By
     isNull(T2.ДатаДоступностиСклад, @P_MaxDate),
 	T1.НоменклатураСсылка
 Having 
-    min(Case when 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1;
+    min(Case when 0 < isNull(T2.ОстатокНаСкладе, 0) Then 1 Else 0 End) = 1
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select
 	T1.НоменклатураСсылка AS НоменклатураСсылка,
@@ -1687,7 +1824,8 @@ Group by
 	T1.НоменклатураСсылка,
 	T1.ЭтоСклад,
 	T1.ДатаДоступности,
-	T1.СкладНазначения;
+	T1.СкладНазначения
+OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select
 	Источники1.НоменклатураСсылка AS Номенклатура,
@@ -2071,7 +2209,6 @@ FROM Temp_PickupDatesGroup f
     FROM cteTally
     ORDER BY N) t
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
-	;
 
 Select 
 	DATEADD(
@@ -2108,6 +2245,7 @@ Where
 			then ПВЗГрафикРаботы._Fld25265 
 		else 0 --не найдено ни графика ни изменения графика  
 	end = 0x00  -- не выходной
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
 ;	
 
 SELECT

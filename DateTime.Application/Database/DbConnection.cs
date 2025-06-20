@@ -10,6 +10,8 @@ namespace DateTimeService.Application.Database
         public string ConnectionWithoutCredentials { get; set; } = "";
         public long ConnectTimeInMilliseconds { get; set; }
         public string ConnectionString { get; set; } = "";
+        public DateTimeOffset LastRecompileAvailableDate { get; set; }
+        public DateTimeOffset LastRecompileIntervalList { get; set; }
     }
 
     public enum DatabaseType

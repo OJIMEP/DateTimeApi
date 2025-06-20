@@ -1,4 +1,5 @@
 ﻿using DateTimeService.Application.Database;
+using DateTimeService.Application.Database.DatabaseManagement;
 using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
 using Microsoft.AspNetCore.Http;
@@ -18,15 +19,17 @@ namespace DateTimeService.Application.Repositories
         private readonly IHttpContextAccessor _contextAccessor;
         private readonly IConfiguration _configuration;
         private readonly RedisRepository _redisRepository;
+        private readonly IReadableDatabase _readableDatabaseService;
 
         public DatabaseRepositoryBasic(IHttpContextAccessor contextAccessor, IConfiguration configuration,
-            IDbConnectionFactory dbConnectionFactory, IMemoryCache memoryCache, IGeoZones geoZones, RedisRepository redisRepository)
+            IDbConnectionFactory dbConnectionFactory, IMemoryCache memoryCache, IGeoZones geoZones, RedisRepository redisRepository, IReadableDatabase readableDatabaseService)
         {
             _contextAccessor = contextAccessor;
             _configuration = configuration;
             _dbConnectionFactory = dbConnectionFactory;
             _geoZones = geoZones;
             _redisRepository = redisRepository;
+            _readableDatabaseService = readableDatabaseService;
         }
 
         public async Task<AvailableDateResult> GetAvailableDates(AvailableDateQuery query, CancellationToken token = default)
@@ -535,8 +538,8 @@ namespace DateTimeService.Application.Repositories
                     var pickupPoint = $"@PickupPoint{index}";
 
                     //cmdGoodsTable.Parameters.AddWithValue(pickupPoint, string.Join(",", item.PickupPoints.Take(3)));
-                    cmdGoodsTable.Parameters.Add(pickupPoint, SqlDbType.NVarChar, 45);
-                    cmdGoodsTable.Parameters[pickupPoint].Value = string.Join(",", item.PickupPoints.Take(10)); //читерство
+                    cmdGoodsTable.Parameters.Add(pickupPoint, SqlDbType.NVarChar, 150);
+                    cmdGoodsTable.Parameters[pickupPoint].Value = string.Join(",", item.PickupPoints); //читерство .Take(10)
 
                     var parameterStringPickup = $"({article}, {code}, {pickupPoint}, {quantity})";
                     parameters.Add(parameterStringPickup);

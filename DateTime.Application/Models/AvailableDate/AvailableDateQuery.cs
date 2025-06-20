@@ -1,4 +1,6 @@
-﻿namespace DateTimeService.Application.Models
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+
+namespace DateTimeService.Application.Models
 {
     public class AvailableDateQuery
     {
@@ -72,6 +74,27 @@
                     queryWithoutQuantity.Codes.Add(item);
                 }
             }
+        }
+
+        public static IEnumerable<AvailableDateQuery> SplitByCodes(AvailableDateQuery source, int batchSize = 30)
+        {
+            if (source.Codes == null || source.Codes.Count == 0)
+                return new List<AvailableDateQuery> { source };
+
+            if (source.Codes.Count <= batchSize)
+                return new List<AvailableDateQuery> { source };
+
+            return source.Codes
+                .Select((code, index) => new { code, index })
+                .GroupBy(x => x.index / batchSize)
+                .Select(group => new AvailableDateQuery
+                {
+                    CityId = source.CityId,
+                    DeliveryTypes = source.DeliveryTypes,
+                    CheckQuantity = source.CheckQuantity,
+                    Codes = group.Select(x => x.code).ToList()
+                })
+                .ToList();
         }
     }
 }

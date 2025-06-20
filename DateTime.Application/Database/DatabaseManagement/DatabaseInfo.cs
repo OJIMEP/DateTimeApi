@@ -16,6 +16,8 @@
         public double PriorityCoefficient { get; set; } = 1;
         public DatabaseType DatabaseType { get; set; }
         public List<ServiceEndpoint> EndpointsList { get; set; }
+        public DateTimeOffset LastRecompileAvailableDate { get; set; }
+        public DateTimeOffset LastRecompileIntervalList { get; set; }
 
         public DatabaseInfo(DbConnectionParameter connectionParameter)
         {

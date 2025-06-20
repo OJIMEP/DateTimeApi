@@ -17,5 +17,7 @@ namespace DateTimeService.Contracts.Responses
         public int TimeCriteriaFailCount { get; set; }
         public List<string> EndpointList { get; set; }
         public double PriorityCoefficient { get; set; }
+        public DateTimeOffset LastRecompileAvailableDate { get; set; }
+        public DateTimeOffset LastRecompileIntervalList { get; set; }
     }
 }

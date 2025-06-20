@@ -44,11 +44,10 @@ namespace DateTimeService.Application.Repositories
                 DeleteCachedDataFromInputData(queryWithoutQuantity.Codes, dataFromCache);
             }
 
-            List<AvailableDateQuery> queryList = new()
-            {
-                queryWithoutQuantity,
-                queryWithQuantity
-            };
+            List<AvailableDateQuery> queryList = new();
+
+            queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithQuantity));
+            queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithoutQuantity));
 
             // для получившегося списка запросов запускаем параллельное получение данных
             Task<AvailableDateResult>[] tasksArray = queryList.Select(subquery => Task.Run(() => _databaseRepository.GetAvailableDates(subquery, token))).ToArray();

@@ -1,7 +1,11 @@
 ﻿using Dapper;
+using DateTimeService.Api;
+using DateTimeService.Application.Database.DatabaseManagement;
+using DateTimeService.Application.Logging;
 using DateTimeService.Application.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
@@ -26,10 +30,13 @@ namespace DateTimeService.Application.Repositories
     {
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
-        public GeoZones(IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        private readonly ILogger<GeoZones> _logger;
+
+        public GeoZones(IConfiguration configuration, IHttpClientFactory httpClientFactory, ILogger<GeoZones> logger)
         {
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
+            _logger = logger;
         }
 
         public async Task<Boolean> AdressExists(SqlConnection connection, string _addressId, CancellationToken token = default)
@@ -116,10 +123,11 @@ namespace DateTimeService.Application.Repositories
             string connString = _configuration.GetConnectionString("BTS_zones");
             string login = _configuration.GetValue<string>("BTS_login");
             string pass = _configuration.GetValue<string>("BTS_pass");
+            int timeout = _configuration.GetValue<int>("BTS_timeout");
 
             var client = _httpClientFactory.CreateClient();
 
-            client.Timeout = new TimeSpan(0, 0, 5);
+            client.Timeout = new TimeSpan(0, 0, 0, 0, timeout);
 
             var request = new HttpRequestMessage(HttpMethod.Post,
             connString);
@@ -150,7 +158,7 @@ namespace DateTimeService.Application.Repositories
             string result = "";
             try
             {
-                var response = await client.SendAsync(request, token);
+                var response = await client.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -163,6 +171,17 @@ namespace DateTimeService.Application.Repositories
                 {
                     throw new Exception(response.ToString());
                 }
+            }
+            catch (TaskCanceledException)
+            {
+                var logElement = new ElasticLogElement
+                {
+                    Status = LogStatus.Error,
+                    ErrorDescription = "Таймаут при получении ID зоны из БТС"
+                };
+                _logger.LogElastic(logElement);
+                return result;
+
             }
             catch (Exception ex)
             {
@@ -208,6 +227,11 @@ namespace DateTimeService.Application.Repositories
                 if (coords.AvailableToUse)
                 {
                     zoneId = await GetGeoZoneID(coords, token);
+                }
+
+                if (alwaysCheckGeozone && zoneId == "" && !addressExists)
+                {
+                    addressExists = await AdressExists(connection, query.AddressId, token);
                 }
             }
 

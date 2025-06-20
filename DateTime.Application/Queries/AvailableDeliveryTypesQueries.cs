@@ -177,11 +177,11 @@ Select
 Into #Temp_Dimensions
 From
     #Temp_Size T1 With(NOLOCK)
-    Inner Join dbo._Const21167 T2 On 1 = 1
-    Inner Join dbo._Const21165 T3 On 1 = 1
-    Inner Join dbo._Const21338 T4 On 1 = 1
-    Inner Join dbo._Const21336 T5 On 1 = 1
-    Inner Join dbo._Const21579 T6 On 1 = 1
+    Inner Join dbo._Const21167 T2 WITH(NOLOCK) On 1 = 1
+    Inner Join dbo._Const21165 T3 WITH(NOLOCK) On 1 = 1
+    Inner Join dbo._Const21338 T4 WITH(NOLOCK) On 1 = 1
+    Inner Join dbo._Const21336 T5 WITH(NOLOCK) On 1 = 1
+    Inner Join dbo._Const21579 T6 WITH(NOLOCK) On 1 = 1
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
 Select
