@@ -211,7 +211,8 @@ namespace DateTimeService.Application.Database.DatabaseManagement
                     Parameters1C.First(x => x.Name.Contains("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа")).ValueDouble,
                     Parameters1C.First(x => x.Name.Contains("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа")).ValueDouble,
                     pickupWorkingHoursJoinType,
-                    "");
+                    "",
+                    5);
 
                 //execute the SQLCommand
                 result = await cmd.ExecuteNonQueryAsync(cancellationToken);

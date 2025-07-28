@@ -106,7 +106,7 @@ INTO #Temp_ParsedPickupPoints
 FROM 
     RankedWarehouses
 WHERE 
-    RowNum <= 5
+    RowNum <= {8}
 ORDER BY 
     СписокПВЗ, ERPКодСклада
 OPTION (KEEP PLAN, KEEPFIXED PLAN)

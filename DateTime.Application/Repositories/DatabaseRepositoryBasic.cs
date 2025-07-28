@@ -333,7 +333,8 @@ namespace DateTimeService.Application.Repositories
                 parameters1C.GetValue("КоличествоДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 parameters1C.GetValue("ПроцентДнейАнализаЛучшейЦеныПриОтсрочкеЗаказа"),
                 pickupWorkingHoursJoinType,
-                useIndexHint);
+                useIndexHint,
+                _configuration.GetValue<int>("AvailableDatePickupPointsCount", 5));
 
             cmd.CommandText = queryText;
 

@@ -1904,6 +1904,7 @@ Select
 	0,
 	0
 From #Temp_AvailablePickUp
+Where #Temp_AvailablePickUp.ВремяНачала >= DATEADD(DAY, @P_Credit, @P_DateTimePeriodBegin) -- для кредита возвращаем даты начиная со следующего дня
 OPTION (OPTIMIZE FOR (@P_DateTimePeriodBegin='{2}',@P_DateTimePeriodEnd='{3}'), KEEP PLAN, KEEPFIXED PLAN);
 
 Select 
@@ -2030,7 +2031,7 @@ From #Temp_AvailableIntervals ДоступныеИнтервалы
 Order By ДоступныеИнтервалы.Период
 OPTION (KEEP PLAN, KEEPFIXED PLAN);
 
-Select
+SELECT DISTINCT
 	ДоступныеИнтервалы.StartDate,
 	ДоступныеИнтервалы.EndDate,
 	ДоступныеИнтервалы.Bonus,
