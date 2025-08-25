@@ -49,6 +49,8 @@ namespace DateTimeService.Application.Repositories
             queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithQuantity));
             queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithoutQuantity));
 
+            _contextAccessor.HttpContext.Items["QueriesCount"] = queryList.Where(q => q.Codes.Count > 0).Count();
+
             // для получившегося списка запросов запускаем параллельное получение данных
             Task<AvailableDateResult>[] tasksArray = queryList.Select(subquery => Task.Run(() => _databaseRepository.GetAvailableDates(subquery, token))).ToArray();
 

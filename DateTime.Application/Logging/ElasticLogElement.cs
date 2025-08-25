@@ -23,6 +23,7 @@ namespace DateTimeService.Application.Logging
         public long TimeGettingFromCache { get; set; }
         public Dictionary<string, string> AdditionalData { get; set; }
         public int TotalItems { get; set; }
+        public int QueriesCount { get; set; }
         public double FromCachePercent { get; set; }
         public string? CallStack { get; set; }
 
@@ -58,6 +59,7 @@ namespace DateTimeService.Application.Logging
                 TotalItems = items.TryGetValue("TotalItems", out object? totalItems) ? (int)(totalItems ?? 0) : 0;
                 var FromCache = items.TryGetValue("FromCache", out object? fromCache) ? (int)(fromCache ?? 0) : 0;
                 FromCachePercent = TotalItems != 0 ? Math.Round(FromCache / (double)TotalItems * 100, 2) : 0;
+                QueriesCount = items.TryGetValue("QueriesCount", out object? queries) ? (int)(queries ?? 0) : 1;
             }
             catch { }
         }
