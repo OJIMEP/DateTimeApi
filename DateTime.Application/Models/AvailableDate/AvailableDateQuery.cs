@@ -76,7 +76,7 @@ namespace DateTimeService.Application.Models
             }
         }
 
-        public static IEnumerable<AvailableDateQuery> SplitByCodes(AvailableDateQuery source, int batchSize = 30)
+        public static IEnumerable<AvailableDateQuery> SplitByCodes(AvailableDateQuery source, int batchSize = 60)
         {
             if (source.Codes == null || source.Codes.Count == 0)
                 return new List<AvailableDateQuery> { source };
