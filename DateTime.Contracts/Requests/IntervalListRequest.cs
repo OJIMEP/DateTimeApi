@@ -9,7 +9,7 @@ namespace DateTimeService.Contracts.Requests
         public string? AddressId { get; set; }
 
         [JsonPropertyName("delivery_type")]
-        public required string DeliveryType { get; set; }
+        public string? DeliveryType { get; set; }
 
         [JsonPropertyName("pickup_point")]
         public string? PickupPoint { get; set; }

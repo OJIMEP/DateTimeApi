@@ -1,5 +1,7 @@
-﻿using DateTimeService.Application.Models;
+﻿using DateTimeService.Application.Database;
+using DateTimeService.Application.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 
 namespace DateTimeService.Application.Repositories
 {
@@ -46,10 +48,37 @@ namespace DateTimeService.Application.Repositories
 
             List<AvailableDateQuery> queryList = new();
 
-            queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithQuantity));
-            queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithoutQuantity));
+            if (queryWithoutQuantity.Codes.Any())
+            {
+                queryWithoutQuantity.UsePreliminaryCalculation = await _databaseRepository.UsePreliminaryCalculation(queryWithoutQuantity.CityId, token);
+            }
 
+            queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithQuantity));
+
+            if (queryWithoutQuantity.UsePreliminaryCalculation)
+            {
+                foreach (var q in AvailableDateQuery.SplitByPickupPoints(queryWithoutQuantity))
+                {
+                    queryList.AddRange(AvailableDateQuery.SplitByCodes(q));
+                }
+            }
+            else
+            {
+                queryList.AddRange(AvailableDateQuery.SplitByCodes(queryWithoutQuantity));
+            }
+
+            var onlyPreliminaryCalculation = true;
+            foreach (var q in queryList)
+            {
+                if (q.Codes.Any() && !q.UsePreliminaryCalculation)
+                {
+                    onlyPreliminaryCalculation = false;
+                    break;
+                }
+            }
+          
             _contextAccessor.HttpContext.Items["QueriesCount"] = queryList.Where(q => q.Codes.Count > 0).Count();
+            _contextAccessor.HttpContext.Items["OnlyPreliminaryCalculation"] = onlyPreliminaryCalculation;
 
             // для получившегося списка запросов запускаем параллельное получение данных
             Task<AvailableDateResult>[] tasksArray = queryList.Select(subquery => Task.Run(() => _databaseRepository.GetAvailableDates(subquery, token))).ToArray();

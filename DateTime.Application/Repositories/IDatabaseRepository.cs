@@ -9,5 +9,7 @@ namespace DateTimeService.Application.Repositories
         Task<IntervalListResult> GetIntervalList(IntervalListQuery query, CancellationToken token = default);
 
         Task<DeliveryTypeAvailabilityResult> GetDeliveryTypeAvailability(AvailableDeliveryTypesQuery query, string deliveryType, CancellationToken token = default);
+
+        Task<bool> UsePreliminaryCalculation(string cityId, CancellationToken token = default);
     }
 }

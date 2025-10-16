@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-
-namespace DateTimeService.Application.Models
+﻿namespace DateTimeService.Application.Models
 {
     public class AvailableDateQuery
     {
@@ -9,6 +7,8 @@ namespace DateTimeService.Application.Models
         public string[] DeliveryTypes { get; init; }
 
         public bool CheckQuantity { get; set; }
+
+        public bool UsePreliminaryCalculation { get; set; }
 
         public List<CodeItemQuery> Codes { get; set; }
 
@@ -76,7 +76,7 @@ namespace DateTimeService.Application.Models
             }
         }
 
-        public static IEnumerable<AvailableDateQuery> SplitByCodes(AvailableDateQuery source, int batchSize = 60)
+        public static IEnumerable<AvailableDateQuery> SplitByCodes(AvailableDateQuery source, int batchSize = 50)
         {
             if (source.Codes == null || source.Codes.Count == 0)
                 return new List<AvailableDateQuery> { source };
@@ -92,9 +92,29 @@ namespace DateTimeService.Application.Models
                     CityId = source.CityId,
                     DeliveryTypes = source.DeliveryTypes,
                     CheckQuantity = source.CheckQuantity,
+                    UsePreliminaryCalculation = source.UsePreliminaryCalculation,
                     Codes = group.Select(x => x.code).ToList()
                 })
                 .ToList();
+        }
+
+        public static IEnumerable<AvailableDateQuery> SplitByPickupPoints(AvailableDateQuery source)
+        {
+            if (source.Codes == null || source.Codes.Count == 0)
+                return new List<AvailableDateQuery> { source };
+
+            var result = source.Codes
+                .GroupBy(code => string.Join("|", code.PickupPoints.OrderBy(p => p)))
+                .Select(group => new AvailableDateQuery
+            {
+                CityId = source.CityId,
+                DeliveryTypes = source.DeliveryTypes,
+                CheckQuantity = source.CheckQuantity,
+                UsePreliminaryCalculation = source.UsePreliminaryCalculation,
+                Codes = group.ToList()
+            });
+
+            return result;
         }
     }
 }

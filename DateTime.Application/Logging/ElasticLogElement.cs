@@ -10,6 +10,8 @@ namespace DateTimeService.Application.Logging
         public string? ResponseContent { get; set; }
         public string? RequestContent { get; set; }
         public long TimeSqlExecution { get; set; }
+        public long TimeSqlExecutionDelivery { get; set; }
+        public long TimeSqlExecutionPickup { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public LogStatus Status { get; set; }
         public string? ErrorDescription { get; set; }
@@ -20,12 +22,14 @@ namespace DateTimeService.Application.Logging
         public long TimeLocationExecution { get; set; }
         public long TimeDatabaseConnection { get; set; }
         public long TimeGlobalParametersExecution { get; set; }
+        public long TimeUsePreliminaryCalculation { get; set; }
         public long TimeGettingFromCache { get; set; }
         public Dictionary<string, string> AdditionalData { get; set; }
         public int TotalItems { get; set; }
         public int QueriesCount { get; set; }
         public double FromCachePercent { get; set; }
         public string? CallStack { get; set; }
+        public bool OnlyPreliminaryCalculation { get; set; }
 
         public ElasticLogElement()
         {
@@ -56,10 +60,14 @@ namespace DateTimeService.Application.Logging
                 TimeGlobalParametersExecution = items.TryGetValue("TimeGlobalParametersExecution", out object? globalParameters) ? (long)(globalParameters ?? 0) : 0;
                 TimeLocationExecution = items.TryGetValue("TimeLocationExecution", out object? timeLocation) ? (long)(timeLocation ?? 0) : 0;
                 TimeGettingFromCache = items.TryGetValue("TimeGettingFromCache", out object? timeCache) ? (long)(timeCache ?? 0) : 0;
+                TimeUsePreliminaryCalculation = items.TryGetValue("TimeUsePreliminaryCalculation", out object? preliminary) ? (long)(preliminary ?? 0) : 0;
                 TotalItems = items.TryGetValue("TotalItems", out object? totalItems) ? (int)(totalItems ?? 0) : 0;
                 var FromCache = items.TryGetValue("FromCache", out object? fromCache) ? (int)(fromCache ?? 0) : 0;
                 FromCachePercent = TotalItems != 0 ? Math.Round(FromCache / (double)TotalItems * 100, 2) : 0;
                 QueriesCount = items.TryGetValue("QueriesCount", out object? queries) ? (int)(queries ?? 0) : 1;
+                TimeSqlExecutionDelivery = items.TryGetValue("TimeSqlExecutionDelivery", out object? timeSqlDelivery) ? (long)(timeSqlDelivery ?? 0) : 0;
+                TimeSqlExecutionPickup = items.TryGetValue("TimeSqlExecutionPickup", out object? timeSqlPickup) ? (long)(timeSqlPickup ?? 0) : 0;
+                OnlyPreliminaryCalculation = items.TryGetValue("OnlyPreliminaryCalculation", out object? onlyPreliminary) && (bool)(onlyPreliminary ?? false);
             }
             catch { }
         }

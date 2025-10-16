@@ -1,4 +1,5 @@
-﻿using DateTimeService.Application.Database;
+﻿using Dapper;
+using DateTimeService.Application.Database;
 using DateTimeService.Application.Database.DatabaseManagement;
 using DateTimeService.Application.Models;
 using DateTimeService.Application.Queries;
@@ -19,17 +20,15 @@ namespace DateTimeService.Application.Repositories
         private readonly IHttpContextAccessor _contextAccessor;
         private readonly IConfiguration _configuration;
         private readonly RedisRepository _redisRepository;
-        private readonly IReadableDatabase _readableDatabaseService;
 
         public DatabaseRepositoryBasic(IHttpContextAccessor contextAccessor, IConfiguration configuration,
-            IDbConnectionFactory dbConnectionFactory, IMemoryCache memoryCache, IGeoZones geoZones, RedisRepository redisRepository, IReadableDatabase readableDatabaseService)
+            IDbConnectionFactory dbConnectionFactory, IGeoZones geoZones, RedisRepository redisRepository)
         {
             _contextAccessor = contextAccessor;
             _configuration = configuration;
             _dbConnectionFactory = dbConnectionFactory;
             _geoZones = geoZones;
             _redisRepository = redisRepository;
-            _readableDatabaseService = readableDatabaseService;
         }
 
         public async Task<AvailableDateResult> GetAvailableDates(AvailableDateQuery query, CancellationToken token = default)
@@ -44,13 +43,20 @@ namespace DateTimeService.Application.Repositories
                 return resultDict;
             }
 
+            if (query.UsePreliminaryCalculation)
+            {
+                return await GetAvailableDatesPreliminaryCalculation(query, token);
+            }
+
             DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDate, token: token);
 
             List<AvailableDateRecord> dbResult = new();
 
             using (var connection = dbConnection.Connection)
             {
-                SqlCommand command = await AvailableDateCommand(connection, query, dbConnection);
+                SqlCommand command;
+
+                command = await AvailableDateCommand(connection, query, dbConnection);
 
                 Stopwatch watch = Stopwatch.StartNew();
 
@@ -82,57 +88,7 @@ namespace DateTimeService.Application.Repositories
                 }              
             }
 
-            try
-            {
-                foreach (var codeItem in query.Codes)
-                {
-                    var resultElement = new AvailableDateElementResult()
-                    {
-                        Code = codeItem.Article,
-                        SalesCode = codeItem.SalesCode
-                    };
-
-                    AvailableDateRecord? dbRecord;
-
-                    if (String.IsNullOrEmpty(codeItem.Code))
-                    {
-                        dbRecord = dbResult.FirstOrDefault(x => x.Article == codeItem.Article);
-                    }
-                    else
-                    {
-                        dbRecord = dbResult.FirstOrDefault(x => x.Code == codeItem.Code);
-                    }
-
-                    if (dbRecord is not null)
-                    {
-                        resultElement.Courier = dbRecord.Courier.Year != 3999
-                            ? dbRecord.Courier.ToString("yyyy-MM-ddTHH:mm:ss")
-                            : null;
-                        resultElement.Self = dbRecord.Self.Year != 3999
-                            ? dbRecord.Self.ToString("yyyy-MM-ddTHH:mm:ss")
-                            : null;
-
-                        resultElement.YourTimeInterval = dbRecord.YourTimeInterval;
-                    }
-
-                    if (String.IsNullOrEmpty(codeItem.Code))
-                    {
-                        resultDict.Data.TryAdd(codeItem.Article, resultElement);
-                    }
-                    else
-                    {
-                        resultDict.Data.TryAdd($"{codeItem.Article}_{codeItem.SalesCode}", resultElement);
-                    }
-                }
-            }
-            catch (ArgumentException)
-            {
-                throw new Exception("Duplicated keys in dictionary");
-            }
-            catch (Exception)
-            {
-                throw;
-            }
+            resultDict.FillFromAvailableDateRecords(dbResult, query);
 
             return resultDict;
         }
@@ -339,6 +295,227 @@ namespace DateTimeService.Application.Repositories
             cmd.CommandText = queryText;
 
             return cmd;
+        }
+
+        private async Task<AvailableDateResult> GetAvailableDatesPreliminaryCalculation(AvailableDateQuery query, CancellationToken token = default)
+        {
+            var resultDict = new AvailableDateResult
+            {
+                WithQuantity = query.CheckQuantity
+            };
+
+            // Запускаем обе функции параллельно
+            var taskDelivery = Task.Run(() => GetAvailableDeliveryDates(query, token));
+            var taskPickup = Task.Run(() => GetAvailablePickupDates(query, token));
+
+            // Ожидаем завершения обеих задач
+            await Task.WhenAll(taskDelivery, taskPickup);
+
+            // Получаем результаты
+            var deliveryResult = taskDelivery.Result;
+            var pickupResult = taskPickup.Result;
+
+            lock (_contextAccessor.HttpContext.Items)
+            {
+                var items = _contextAccessor.HttpContext.Items;
+                var timeSqlExecution = items.TryGetValue("TimeSqlExecution", out object? timeSql) ? (long)(timeSql ?? 0) : 0;
+                var timeSqlExecutionDelivery = items.TryGetValue("TimeSqlExecutionDelivery", out object? timeSqlDelivery) ? (long)(timeSqlDelivery ?? 0) : 0;
+                var timeSqlExecutionPickup = items.TryGetValue("TimeSqlExecutionPickup", out object? timeSqlPickup) ? (long)(timeSqlPickup ?? 0) : 0;
+
+                var currentMaxSqlExecution = Math.Max(deliveryResult.sqlExecutionTime, pickupResult.sqlExecutionTime);
+
+                _contextAccessor.HttpContext.Items["TimeSqlExecution"] = Math.Max(timeSqlExecution, currentMaxSqlExecution);
+                _contextAccessor.HttpContext.Items["TimeSqlExecutionDelivery"] = Math.Max(timeSqlExecutionDelivery, deliveryResult.sqlExecutionTime);
+                _contextAccessor.HttpContext.Items["TimeSqlExecutionPickup"] = Math.Max(timeSqlExecutionPickup, pickupResult.sqlExecutionTime);
+            }
+
+            // Полное внешнее объединение
+            var deliveryDict = deliveryResult.availableDateRecords
+                .ToDictionary(x => new { x.Article, x.Code });
+            var pickupDict = pickupResult.availableDateRecords
+                .ToDictionary(x => new { x.Article, x.Code });
+
+            // Получаем все уникальные ключи из обоих списков
+            var allKeys = deliveryDict.Keys.Union(pickupDict.Keys).Distinct();
+
+            var mergedList = new List<AvailableDateRecord>();
+            var maxDate = new DateTime(3999, 11, 11, 0, 0, 0);
+
+            foreach (var key in allKeys)
+            {
+                deliveryDict.TryGetValue(key, out AvailableDateRecord? deliveryRecord);
+                pickupDict.TryGetValue(key, out AvailableDateRecord? pickupRecord);
+
+                mergedList.Add(new AvailableDateRecord
+                {
+                    Article = key.Article,
+                    Code = key.Code,
+                    Courier = deliveryRecord?.Courier ?? maxDate,
+                    Self = pickupRecord?.Self ?? maxDate,
+                    YourTimeInterval = deliveryRecord?.YourTimeInterval ?? 0
+                });
+            }
+
+            resultDict.FillFromAvailableDateRecords(mergedList, query);
+
+            return resultDict;
+        }
+
+        private async Task<AvailableDatePreliminaryCalculationResult> GetAvailableDeliveryDates(AvailableDateQuery query, CancellationToken token = default)
+        {
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDate, token: token);
+
+            AvailableDatePreliminaryCalculationResult result = new();
+
+            using (var connection = dbConnection.Connection)
+            {
+                SqlCommand command;
+
+                command = await AvailableDeliveryDatesCommand(connection, query, dbConnection.UseAggregations, token);
+
+                Stopwatch watch = Stopwatch.StartNew();
+
+                SqlDataReader dr = await command.ExecuteReaderAsync(token);
+
+                if (dr.HasRows)
+                {
+                    while (await dr.ReadAsync(token))
+                    {
+                        var record = new AvailableDateRecord
+                        {
+                            Article = dr.GetString(0),
+                            Code = dr.GetString(1),
+                            Courier = dr.GetDateTime(2).AddYears(-2000),
+                            YourTimeInterval = dr.GetInt32(3)
+                        };
+
+                        result.availableDateRecords.Add(record);
+                    }
+                }
+
+                _ = dr.CloseAsync();
+
+                watch.Stop();
+                result.sqlExecutionTime = watch.ElapsedMilliseconds;
+            }
+
+            return result;
+        }
+
+        private async Task<AvailableDatePreliminaryCalculationResult> GetAvailablePickupDates(AvailableDateQuery query, CancellationToken token = default)
+        {
+            DbConnection dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDate, token: token);
+
+            AvailableDatePreliminaryCalculationResult result = new();
+
+            using (var connection = dbConnection.Connection)
+            {
+                SqlCommand command;
+
+                command = await AvailablePickupDatesCommand(connection, query, token);
+
+                Stopwatch watch = Stopwatch.StartNew();
+
+                SqlDataReader dr = await command.ExecuteReaderAsync(token);
+
+                if (dr.HasRows)
+                {
+                    while (await dr.ReadAsync(token))
+                    {
+                        var record = new AvailableDateRecord
+                        {
+                            Article = dr.GetString(0),
+                            Code = dr.GetString(1),
+                            Self = dr.GetDateTime(2).AddYears(-2000)
+                        };
+
+                        result.availableDateRecords.Add(record);
+                    }
+                }
+
+                _ = dr.CloseAsync();
+
+                watch.Stop();
+                result.sqlExecutionTime = watch.ElapsedMilliseconds;
+            }
+
+            return result;
+        }
+
+        private async Task<SqlCommand> AvailableDeliveryDatesCommand(SqlConnection connection, AvailableDateQuery query, bool useAggregation, CancellationToken token = default)
+        {
+            string queryText = "";
+
+            SqlCommand cmd = new(queryText, connection)
+            {
+                CommandTimeout = 2
+            };
+
+            var queryTextBegin = TextFillGoodsTablePreliminaryCalculation(query, cmd);
+
+            var parameters1C = await GetGlobalParameters(connection, token);
+            var currentDate = DateTime.Now.AddYears(2000);
+
+            SetCommonParameters(cmd, currentDate, parameters1C);
+
+            cmd.Parameters.Add("@P_CityCode", SqlDbType.NVarChar, 10);
+            cmd.Parameters["@P_CityCode"].Value = query.CityId;
+
+            List<string> queryParts = new()
+            {
+                AvailableDatePreliminaryCalculationQuery.AvailableDateDelivery1,
+                useAggregation ? AvailableDatePreliminaryCalculationQuery.TempAllIntervalsAggregate : AvailableDatePreliminaryCalculationQuery.TempAllIntervals,
+                AvailableDatePreliminaryCalculationQuery.AvailableDateDelivery2
+            };
+
+            var mainQueryText = String.Join("", queryParts);
+            //var mainQueryText = AvailableDatePreliminaryCalculationQuery.AvailableDateDelivery;
+
+            queryText = queryTextBegin + string.Format(mainQueryText,
+                currentDate.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
+                currentDate.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1).ToString("yyyy-MM-ddTHH:mm:ss")
+            );
+
+            cmd.CommandText = queryText;
+
+            return cmd;
+        }
+
+        private async Task<SqlCommand> AvailablePickupDatesCommand(SqlConnection connection, AvailableDateQuery query, CancellationToken token = default)
+        {
+            string queryText = "";
+
+            SqlCommand cmd = new(queryText, connection)
+            {
+                CommandTimeout = 2
+            };
+
+            var queryTextBegin = TextFillGoodsTablePreliminaryCalculation(query, cmd, true);
+
+            var parameters1C = await GetGlobalParameters(connection, token);
+            var currentDate = DateTime.Now.AddYears(2000);
+
+            SetCommonParameters(cmd, currentDate, parameters1C);
+
+            queryText = queryTextBegin + AvailableDatePreliminaryCalculationQuery.AvailableDatePickup;
+
+            cmd.CommandText = queryText;
+
+            return cmd;
+        }
+
+        private void SetCommonParameters(SqlCommand cmd, DateTime currentDate, List<GlobalParameter> parameters1C)
+        {
+            cmd.Parameters.AddWithValue("@P_DateTimeNow", currentDate);
+            cmd.Parameters.AddWithValue("@P_DateTimePeriodBegin", currentDate.Date);
+            cmd.Parameters.AddWithValue("@P_DateTimePeriodEnd", currentDate.Date.AddDays(parameters1C.GetValue("rsp_КоличествоДнейЗаполненияГрафика") - 1));
+            cmd.Parameters.AddWithValue("@P_TimeNow", new DateTime(2001, 1, 1, currentDate.Hour, currentDate.Minute, currentDate.Second));
+            cmd.Parameters.AddWithValue("@P_EmptyDate", new DateTime(2001, 1, 1, 0, 0, 0));
+            cmd.Parameters.AddWithValue("@P_MaxDate", new DateTime(5999, 11, 11, 0, 0, 0));
+            cmd.Parameters.AddWithValue("@P_DaysToShow", 7);
+            cmd.Parameters.AddWithValue("@P_ApplyShifting", (int)parameters1C.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            cmd.Parameters.AddWithValue("@P_DaysToShift", (int)parameters1C.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            cmd.Parameters.AddWithValue("@P_ActualDate", currentDate.AddMinutes(_configuration.GetValue<int>("ActualityDateGap") * -1));
         }
 
         private async Task<SqlCommand> IntervalListCommand(SqlConnection connection, 
@@ -557,6 +734,67 @@ namespace DateTimeService.Application.Repositories
             return resultString;
         }
 
+        private static string TextFillGoodsTablePreliminaryCalculation(AvailableDateQuery query, SqlCommand cmdGoodsTable, bool withPickupPoints = false)
+        {
+            var resultString = "";
+            int maxCodes = 50;
+
+            var pickupPoints = query.Codes.FirstOrDefault()?.PickupPoints ?? new List<string>();
+            var pickups = pickupPoints.Concat(Enumerable.Repeat<string?>(null, maxCodes)).Take(maxCodes).ToList();
+
+            var parameters = new List<string>();
+
+            for (int index = 0; index < maxCodes; index++)
+            {
+                string article = $"@Article{index}";
+                string code = $"@Code{index}";
+
+                var parameterString = $"({article}, {code})";
+
+                parameters.Add(parameterString);
+
+                cmdGoodsTable.Parameters.Add(article, SqlDbType.NVarChar, 50);
+                cmdGoodsTable.Parameters.Add(code, SqlDbType.NVarChar, 11);
+
+                if (index < query.Codes.Count)
+                {
+                    // Берем существующий элемент
+                    CodeItemQuery item = query.Codes[index];
+                    cmdGoodsTable.Parameters[article].Value = !string.IsNullOrEmpty(item.Code) ? DBNull.Value : item.Article;
+                    cmdGoodsTable.Parameters[code].Value = string.IsNullOrEmpty(item.Code) ? DBNull.Value : item.Code;
+                }
+                else
+                {
+                    // Добавляем NULL значения для недостающих элементов
+                    cmdGoodsTable.Parameters[article].Value = DBNull.Value;
+                    cmdGoodsTable.Parameters[code].Value = DBNull.Value;
+                }
+            }
+
+            resultString += CommonQueries.TableGoodsRawCreatePreliminary;
+            resultString += string.Format(CommonQueries.TableGoodsRawInsertPreliminary, string.Join(", ", parameters));
+
+            if (withPickupPoints)
+            {
+                var pickupPointsList = new List<string>();
+
+                int i = 0;
+                foreach (var pickupPoint in pickups)
+                {
+                    var parameterString = $"@PickupPoint{i}";
+                    cmdGoodsTable.Parameters.Add(parameterString, SqlDbType.NVarChar, 11);
+                    cmdGoodsTable.Parameters[parameterString].Value = string.IsNullOrEmpty(pickupPoint) ? DBNull.Value : pickupPoint;
+
+                    pickupPointsList.Add(parameterString);
+                    i++;
+                }
+
+                resultString += string.Format(CommonQueries.PickupPointsQuery, string.Join(", ", pickupPointsList));
+            }
+            
+            return resultString;
+        }
+
         private static string TextFillGoodsTable(IntervalListQuery query, SqlCommand cmdGoodsTable)
         {
             var resultString = CommonQueries.TableGoodsRawCreate;
@@ -630,6 +868,86 @@ namespace DateTimeService.Application.Repositories
             }
 
             return parameters;
+        }
+    
+
+        public async Task<bool> UsePreliminaryCalculation(string cityId, CancellationToken token = default)
+        {
+            bool result = false;
+
+            if (!_configuration.GetValue<bool>("UsePreliminaryCalculation"))
+            {
+                return result;
+            }
+
+            using var dbConnection = await _dbConnectionFactory.GetDbConnection(ServiceEndpoint.AvailableDate, token: token);
+
+            Stopwatch watch = Stopwatch.StartNew();
+
+            try
+            {
+                string query = """
+                    DECLARE @DateTimeNow datetime2(3) = DATEADD(YEAR, 2000, GETDATE());
+                    DECLARE @ActualityDate datetime2(3) = DATEADD(MINUTE, -1 * @ActualityDateGap, @DateTimeNow);
+
+                    WITH Geozone AS (
+                    	SELECT TOP 1
+                    		T3._Fld26708RRef AS Геозона --геозона из рс векРасстоянияАВ
+                    	FROM (SELECT
+                    			T1._Fld25549 AS Fld25549_,
+                    			MAX(T1._Period) AS MAXPERIOD_ 
+                    		FROM dbo._InfoRg21711 T1 WITH (NOLOCK)
+                    		WHERE T1._Fld26708RRef <> 0x00 AND T1._Fld25549 = @CityId
+                    		GROUP BY T1._Fld25549) T2
+                    	INNER JOIN dbo._InfoRg21711 T3 WITH (NOLOCK)
+                    	ON T2.Fld25549_ = T3._Fld25549 AND T2.MAXPERIOD_ = T3._Period
+                    ),
+                    Warehouses AS (
+                    	SELECT DISTINCT
+                    		T1._Fld23372RRef Склад
+                    	FROM dbo._Reference114_VT23370 T1 WITH (NOLOCK)
+                    		INNER JOIN Geozone T2 WITH (NOLOCK)
+                    		ON T1._Reference114_IDRRef = T2.Геозона
+                    		INNER JOIN dbo._InfoRg33512 T3 WITH (NOLOCK)
+                    		ON T1._Fld23372RRef = T3._Fld33513RRef
+                    		AND T3._Fld33514 = 0x01
+                    ),
+                    NotActualDates AS (
+                    	SELECT TOP 1
+                    		T1._Fld33513RRef AS Склад
+                    	FROM dbo._InfoRg33512 T1 WITH (NOLOCK)
+                    		INNER JOIN Warehouses T2 WITH (NOLOCK)
+                    		ON T1._Fld33513RRef = T2.Склад
+                    			AND T1._Fld33525 < @ActualityDate
+                    )
+                    SELECT
+                    	SUM(CASE WHEN T2.Склад IS NULL THEN 0 ELSE 1 END)
+                    FROM Warehouses T1 WITH (NOLOCK)
+                    	LEFT JOIN NotActualDates T2 WITH (NOLOCK)
+                    	ON T1.Склад = T2.Склад
+                    HAVING 
+                    	SUM(CASE WHEN T2.Склад IS NULL THEN 0 ELSE 1 END) = 0
+                    """
+                ;
+
+                var actualityDateGap = _configuration.GetValue<int>("ActualityDateGap");
+
+                var queryResult = await dbConnection.Connection.QueryAsync<int>(new CommandDefinition(query, new { CityId = cityId, ActualityDateGap = actualityDateGap }, cancellationToken: token));
+
+                result = queryResult != null && queryResult.Any();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+            watch.Stop();
+            lock (_contextAccessor.HttpContext.Items)
+            {
+                _contextAccessor.HttpContext.Items["TimeUsePreliminaryCalculation"] = watch.ElapsedMilliseconds;
+            }
+
+            return result;
         }
     }
 }

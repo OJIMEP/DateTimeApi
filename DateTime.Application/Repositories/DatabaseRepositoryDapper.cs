@@ -583,5 +583,10 @@ namespace DateTimeService.Application.Repositories
 
             return parameters;
         }
+
+        public async Task<bool> UsePreliminaryCalculation(string cityId, CancellationToken token = default)
+        {
+            return false;
+        }
     }
 }

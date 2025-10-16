@@ -2,7 +2,7 @@
 
 namespace DateTimeService.Application.Database
 {
-    public class DbConnection
+    public class DbConnection: IDisposable
     {
         public SqlConnection Connection { get; set; }
         public DatabaseType DatabaseType { get; set; }
@@ -12,6 +12,11 @@ namespace DateTimeService.Application.Database
         public string ConnectionString { get; set; } = "";
         public DateTimeOffset LastRecompileAvailableDate { get; set; }
         public DateTimeOffset LastRecompileIntervalList { get; set; }
+
+        public void Dispose()
+        {
+            Connection.Dispose();
+        }
     }
 
     public enum DatabaseType
