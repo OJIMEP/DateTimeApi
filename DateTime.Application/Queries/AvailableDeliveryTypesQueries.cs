@@ -779,7 +779,7 @@ From
         And T1.Источник_RTRef = Резервирование._RecorderTRef
         And T1.Источник_RRRef = Резервирование._RecorderRRef
     )
-OPTION (KEEP PLAN, KEEPFIXED PLAN, maxdop 4);
+OPTION (KEEP PLAN, KEEPFIXED PLAN); --, maxdop 4);
 
 With Temp_SupplyDocs AS
 (
@@ -877,7 +877,7 @@ From
     On (T1.НоменклатураСсылка = T2.НоменклатураСсылка)
     Left Outer Join (
         -- нам здесь не важна реальная ближайшая дата, главное, есть ли она. иначе этот запрос выбирает огромное количество записей
-        Select Top 1
+        Select Top 5
             T4.НоменклатураСсылка,
             T4.ДатаДоступности,
             T4.СкладНазначения,

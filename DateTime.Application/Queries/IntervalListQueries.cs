@@ -24,10 +24,12 @@ Select
 Into #Temp_OrderInfo
 from dbo._Document317 OrderDocument
 where 
-	OrderDocument._Date_Time = @P_OrderDate 
+	@P_OrderNumber <> NULL
 	And OrderDocument._Number = @P_OrderNumber
+	And OrderDocument._Date_Time = @P_OrderDate 
 	And _Fld8244 = '2001-01-01T01:00:00' 
 	And _Fld8245 = '2001-01-01T23:00:00'
+;
 
 Select
 	Товары._Fld8276RRef AS НоменклатураСсылка,
@@ -39,6 +41,7 @@ From
 	dbo._Document317_VT8273 Товары
 	Inner Join #Temp_OrderInfo
 		On Товары._Document317_IDRRef = #Temp_OrderInfo.ЗаказСсылка
+;
 
 Select
 	IsNull(_Reference114_VT23370._Fld23372RRef,Геозона._Fld23104RRef) As СкладСсылка,
@@ -81,8 +84,8 @@ Where Склады._Fld19544 = @PickupPoint1
 Union All
 Select #Temp_OrderInfo.ПВЗСсылка from #Temp_OrderInfo
 Where #Temp_OrderInfo.СпособДоставки = 0x9B5E4A5ABB206D854BE9B32BF442A653
-OPTION (KEEP PLAN, KEEPFIXED PLAN);
-
+OPTION (KEEP PLAN, KEEPFIXED PLAN)
+;
 
 /*Создание таблицы товаров и ее наполнение данными из БД*/
 Select 
@@ -194,6 +197,15 @@ FROM (SELECT
 	AND T4._Fld28120 = 0x01) T1
 ;
 
+SELECT DISTINCT
+	ШтрихкодыНоменклатуры._Fld15621RRef AS Номенклатура,
+	ШтрихкодыНоменклатуры._Fld27279 AS Зарегистрирован
+INTO #Temp_Barcodes
+FROM dbo._InfoRg15619 ШтрихкодыНоменклатуры WITH (NOLOCK)
+	INNER JOIN #Temp_Goods Товары
+	ON Товары.НоменклатураСсылка = ШтрихкодыНоменклатуры._Fld15621RRef
+;
+
 WITH НастройкиМаркировкиУКЗ AS 
 (
 SELECT
@@ -225,11 +237,9 @@ FROM (SELECT
 WHERE НастройкиМаркировки.МаркируетсяУКЗ = 0x01),
 ЕстьЗарегистрированныеШтрихкоды AS (
 	SELECT DISTINCT
-		ШтрихкодыНоменклатуры._Fld15621RRef AS Номенклатура
-	FROM dbo._InfoRg15619 ШтрихкодыНоменклатуры WITH (NOLOCK)
-		INNER JOIN #Temp_Goods Товары
-		ON Товары.НоменклатураСсылка = ШтрихкодыНоменклатуры._Fld15621RRef
-	WHERE ШтрихкодыНоменклатуры._Fld27279 = 0x1
+		ШтрихкодыНоменклатуры.Номенклатура
+	FROM #Temp_Barcodes ШтрихкодыНоменклатуры
+	WHERE ШтрихкодыНоменклатуры.Зарегистрирован = 0x1
 )
 SELECT TOP 1
 	МаркируемыеТовары.НоменклатураСсылка
@@ -1088,7 +1098,7 @@ FROM
         AND T1.Источник_RTRef = Резервирование._RecorderTRef
         AND T1.Источник_RRRef = Резервирование._RecorderRRef
     )
-OPTION (KEEP PLAN, KEEPFIXED PLAN, maxdop 4);
+OPTION (KEEP PLAN, KEEPFIXED PLAN);--, maxdop 4);
 
 With Temp_SupplyDocs AS
 (

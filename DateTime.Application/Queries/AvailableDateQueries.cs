@@ -564,7 +564,7 @@ Into #Temp_SourcesWithPrices
 FROM
     #Temp_Sources T1 WITH(NOLOCK)
 Where  T1.Цена <> 0
-OPTION (KEEP PLAN, KEEPFIXED PLAN, maxdop 2);";
+OPTION (KEEP PLAN, KEEPFIXED PLAN);"; //, maxdop 2);";
 
         public const string PickupDateShift = @"
 Select
