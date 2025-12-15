@@ -566,14 +566,7 @@ namespace DateTimeService.Application.Repositories
 
             var jewelrySegment = globalParameters.GetRef("СегментНоменклатурыЮвелирныеИзделия");
 
-            if (jewelrySegment != null)
-            {
-                cmd.Parameters.Add("@P_Jewelry", SqlDbType.Binary, 16).Value = jewelrySegment;
-            }         
-            else
-            {
-                cmd.Parameters.Add("@P_Jewelry", SqlDbType.Binary, 16).Value = DBNull.Value;
-            }
+            cmd.Parameters.Add("@P_Jewelry", SqlDbType.Binary, 16).Value = jewelrySegment != null ? jewelrySegment : DBNull.Value;
 
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
