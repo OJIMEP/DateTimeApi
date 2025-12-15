@@ -564,6 +564,8 @@ namespace DateTimeService.Application.Repositories
             cmd.Parameters.AddWithValue("@P_LoadedIntervalsUsagePercent",
                 (double)globalParameters.GetValue("ПроцентФактическиИспользованныхМощностейДляЗагруженныхИнтервалов"));
 
+            cmd.Parameters.Add("@P_Jewelry", SqlDbType.Binary, 16).Value = globalParameters.GetRef("СегментНоменклатурыЮвелирныеИзделия");
+
             string dateTimeNowOptimizeString = DateMove.Date.ToString("yyyy-MM-ddTHH:mm:ss");
 
             queryText = queryTextBegin + string.Format(queryText,

@@ -14,6 +14,11 @@ namespace DateTimeService.Application.Repositories
         {
             return list.First(x => x.Name.Contains(name)).ValueString;
         }
+
+        public static byte[] GetRef(this List<GlobalParameter> list, string name)
+        {
+            return list.First(x => x.Name.Contains(name)).ValueByte;
+        }
     }
 
     public class GlobalParameter
@@ -21,6 +26,7 @@ namespace DateTimeService.Application.Repositories
         public required string Name { get; init; }
         public double ValueDouble { get; set; }
         public string ValueString { get; set; }
+        public byte[] ValueByte { get; set; }
         public double DefaultDouble { get; set; }
         public bool UseDefault { get; set; }
 
@@ -93,6 +99,11 @@ namespace DateTimeService.Application.Repositories
                 {
                     Name = "EPassКоличествоРабочихДнейДляРегистрацииШтрихкода",
                     DefaultDouble = 0
+                },
+                new GlobalParameter
+                {
+                    Name = "СегментНоменклатурыЮвелирныеИзделия",
+                    DefaultDouble = 0
                 }
             };
 
@@ -108,7 +119,8 @@ namespace DateTimeService.Application.Repositories
                     [_Fld22355_TYPE] As TypeValue,     
                     [_Fld22355_L] As LogicValue,    
                     [_Fld22355_S] As StringValue,    
-                    [_Fld22355_N] As NumberValue     
+                    [_Fld22355_N] As NumberValue,
+                    [_Fld22355_RRRef] As RefValue
                 FROM [dbo].[_InfoRg22353]
                 WHERE [_Fld22354] IN({0})
                 """;
@@ -138,6 +150,10 @@ namespace DateTimeService.Application.Repositories
                 {
                     names.First(x => x.Name.Contains(parameter.Name)).ValueString = parameter.StringValue;
                 }
+                else if (parameter.TypeValue[0] == 8) // reference
+                {
+                    names.First(x => x.Name.Contains(parameter.Name)).ValueByte = parameter.RefValue;
+                }
                 else
                 {
                     names.First(x => x.Name.Contains(parameter.Name)).ValueDouble = (double)parameter.NumberValue;
@@ -160,6 +176,7 @@ namespace DateTimeService.Application.Repositories
             public byte[] LogicValue { get; set; }
             public decimal NumberValue { get; set; }
             public string StringValue { get; set; }
+            public byte[] RefValue { get; set; }
         }
     }
 }

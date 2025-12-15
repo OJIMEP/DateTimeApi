@@ -292,6 +292,7 @@ namespace DateTimeService.Application.Repositories
             queryParameters.Add("@P_DaysToShow", 7);
             queryParameters.Add("@P_ApplyShifting", (int)globalParameters.GetValue("ПрименятьСмещениеДоступностиПрослеживаемыхМаркируемыхТоваров"));
             queryParameters.Add("@P_DaysToShift", (int)globalParameters.GetValue("КоличествоДнейСмещенияДоступностиПрослеживаемыхМаркируемыхТоваров"));
+            queryParameters.Add("@P_Jewelry", globalParameters.GetRef("СегментНоменклатурыЮвелирныеИзделия"), dbType: System.Data.DbType.Binary, size: 16);
 
             if (query.CheckQuantity)
             {
